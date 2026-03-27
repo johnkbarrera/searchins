@@ -1,0 +1,16 @@
+{
+  "name": "portaminas-golfo-persico",
+  "version": "1.0.0",
+  "description": "Buscaminas sobre mapa del Golfo Pérsico con leaderboard en MongoDB",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "mongoose": "^8.8.0",
+    "dotenv": "^16.4.5",
+    "cors": "^2.8.5"
+  }
+}
