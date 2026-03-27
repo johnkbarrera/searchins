@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SEARCHINS — Fixed Responsive</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<style>
+:root { --cell-size: 0px; }
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%;
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  font-family: sans-serif;
+}
+
+#map {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+
+#hud {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  padding: 10px;
+  background: rgba(255,255,255,0.95);
+  display: flex;
+  justify-content: space-between;
+}
+
+#grid-wrapper {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  padding-top: 60px;
+}
+
+#grid {
+  display: grid;
+  border: 1px solid #ccc;
+}
+
+.cell {
+  width: var(--cell-size);
+  height: var(--cell-size);
+  border: 1px solid #ddd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.cell.revealed {
+  background: #eee;
+}
+
+.cell.flagged::after {
+  content: '🚩';
+}
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div id="hud">
+  <div>Mines: <span id="mines-left">40</span></div>
+  <div>Time: <span id="timer">0</span></div>
+</div>
+
+<div id="grid-wrapper">
+  <div id="grid"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const CONFIG = { rows: 16, cols: 16, mines: 40 };
+let board = [];
+let firstClick = true;
+
+const grid = document.getElementById('grid');
+
+function computeCellSize() {
+  const padding = 10;
+  const hudHeight = document.getElementById('hud').offsetHeight || 60;
+
+  const w = window.innerWidth - padding * 2;
+  const h = window.innerHeight - hudHeight - padding * 2;
+
+  return Math.floor(Math.min(w / CONFIG.cols, h / CONFIG.rows));
+}
+
+function createBoard() {
+  board = new Array(CONFIG.rows * CONFIG.cols).fill(0).map(() => ({
+    mine: false,
+    revealed: false,
+    flagged: false,
+    count: 0
+  }));
+}
+
+function placeMines(excludeIndex) {
+  let placed = 0;
+  while (placed < CONFIG.mines) {
+    const i = Math.floor(Math.random() * board.length);
+    if (i === excludeIndex || board[i].mine) continue;
+    board[i].mine = true;
+    placed++;
+  }
+
+  for (let r = 0; r < CONFIG.rows; r++) {
+    for (let c = 0; c < CONFIG.cols; c++) {
+      const idx = r * CONFIG.cols + c;
+      if (board[idx].mine) continue;
+      let count = 0;
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          const nr = r + dr;
+          const nc = c + dc;
+          if (nr < 0 || nc < 0 || nr >= CONFIG.rows || nc >= CONFIG.cols) continue;
+          if (board[nr * CONFIG.cols + nc].mine) count++;
+        }
+      }
+      board[idx].count = count;
+    }
+  }
+}
+
+function renderGrid() {
+  const size = computeCellSize();
+  document.documentElement.style.setProperty('--cell-size', size + 'px');
+
+  grid.innerHTML = '';
+  grid.style.gridTemplateColumns = `repeat(${CONFIG.cols}, ${size}px)`;
+
+  board.forEach((cell, i) => {
+    const el = document.createElement('div');
+    el.className = 'cell';
+
+    el.onclick = () => onLeft(i);
+    el.oncontextmenu = (e) => { e.preventDefault(); onRight(i); };
+
+    grid.appendChild(el);
+  });
+}
+
+function reveal(i) {
+  const cell = board[i];
+  if (cell.revealed || cell.flagged) return;
+
+  cell.revealed = true;
+  const el = grid.children[i];
+  el.classList.add('revealed');
+
+  if (cell.mine) {
+    el.textContent = '💣';
+    alert('Game Over');
+    return;
+  }
+
+  if (cell.count > 0) {
+    el.textContent = cell.count;
+  } else {
+    const r = Math.floor(i / CONFIG.cols);
+    const c = i % CONFIG.cols;
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        const nr = r + dr;
+        const nc = c + dc;
+        if (nr < 0 || nc < 0 || nr >= CONFIG.rows || nc >= CONFIG.cols) continue;
+        reveal(nr * CONFIG.cols + nc);
+      }
+    }
+  }
+}
+
+function onLeft(i) {
+  if (firstClick) {
+    placeMines(i);
+    firstClick = false;
+  }
+  reveal(i);
+}
+
+function onRight(i) {
+  const cell = board[i];
+  cell.flagged = !cell.flagged;
+  grid.children[i].classList.toggle('flagged', cell.flagged);
+}
+
+window.addEventListener('resize', renderGrid);
+
+createBoard();
+renderGrid();
+
+// MAP
+const map = L.map('map', { zoomControl: false });
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+map.setView([26.5, 56], 7);
+</script>
+
+</body>
+</html>

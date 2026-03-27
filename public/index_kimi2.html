@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>⚓ SEARCHINS — Strait of Hormuz</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
@@ -11,7 +11,7 @@
 
   :root {
     --cell-size: 0px;
-    --hud-bg: rgba(245, 243, 237, 0.92);
+    --hud-bg: rgba(245, 243, 237, 0.95);
     --hud-border: rgba(60, 80, 90, 0.18);
     --accent: #0e7c5f;
     --accent-light: #12a87e;
@@ -23,10 +23,10 @@
     --gold-light: #f0b429;
     --gold-bg: rgba(199, 140, 6, 0.07);
     --grid-line: rgba(60, 80, 90, 0.12);
-    --cell-hidden: rgba(255, 255, 255, 0.65);
-    --cell-hover: rgba(14, 124, 95, 0.1);
-    --cell-revealed: rgba(240, 238, 232, 0.82);
-    --cell-mine-hit: rgba(231, 76, 60, 0.25);
+    --cell-hidden: rgba(255, 255, 255, 0.85);
+    --cell-hover: rgba(14, 124, 95, 0.15);
+    --cell-revealed: rgba(240, 238, 232, 0.95);
+    --cell-mine-hit: rgba(231, 76, 60, 0.35);
     --text-primary: #2c3e40;
     --text-dim: #8a9a9e;
     --text-dark: #1a2426;
@@ -37,7 +37,7 @@
     --font-handwritten: 'Permanent Marker', cursive;
   }
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
   html, body {
     width: 100%; height: 100%;
@@ -47,39 +47,46 @@
     color: var(--text-primary);
     user-select: none;
     -webkit-user-select: none;
+    touch-action: none; /* Prevenir scroll y zoom accidental */
   }
 
-  /* ── MAP ── */
+  /* ── MAP OPTIMIZADO ── */
   #map {
     position: fixed; inset: 0; z-index: 0;
     filter: saturate(0.6) brightness(1.08) contrast(0.95);
     transition: filter 0.8s ease;
+    will-change: transform; /* GPU layer */
   }
   body.game-won #map  { filter: saturate(0.9) brightness(1.1) contrast(1.0); }
   body.game-lost #map { filter: saturate(0.2) brightness(0.75) contrast(1.1) sepia(0.3); }
 
-  /* ── SUBTLE GRAIN ── */
+  /* ── GRAIN OPTIMIZADO ── */
   #scanlines {
     position: fixed; inset: 0; z-index: 1; pointer-events: none;
-    opacity: 0.3;
-    background: repeating-linear-gradient(0deg, transparent 0px, transparent 3px, rgba(0,0,0,0.015) 3px, rgba(0,0,0,0.015) 6px);
+    opacity: 0.15; /* Reducido para móviles */
+    background: repeating-linear-gradient(0deg, transparent 0px, transparent 2px, rgba(0,0,0,0.02) 2px, rgba(0,0,0,0.02) 4px);
   }
 
   /* ══════════════════════════════════════════
-     UNLOCK SCREEN
+     UNLOCK SCREEN OPTIMIZADO
      ══════════════════════════════════════════ */
   #unlock-screen {
     position: fixed; inset: 0; z-index: 500;
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
     pointer-events: all;
-    background: rgba(250, 248, 242, 0.5);
-    backdrop-filter: blur(2px);
+    background: rgba(250, 248, 242, 0.98); /* Sólido en lugar de blur */
     transition: opacity 0.6s ease, transform 0.6s ease;
   }
   #unlock-screen.hidden {
     opacity: 0; transform: scale(1.05);
     pointer-events: none;
+  }
+  /* Pausar animaciones cuando está oculto */
+  #unlock-screen.hidden .unlock-btn,
+  #unlock-screen.hidden .sonar-ring,
+  #unlock-screen.hidden .unlock-label {
+    animation-play-state: paused !important;
   }
 
   .unlock-label {
@@ -88,6 +95,7 @@
     letter-spacing: 4px; text-transform: uppercase;
     color: var(--text-dim); margin-bottom: 16px;
     animation: label-pulse 2s ease-in-out infinite;
+    will-change: opacity;
   }
   @keyframes label-pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
 
@@ -96,6 +104,7 @@
     font-size: 12px; color: var(--text-dim);
     margin-bottom: 30px; text-align: center;
     max-width: 360px; line-height: 1.7;
+    padding: 0 20px;
   }
 
   .unlock-btn {
@@ -107,39 +116,44 @@
     cursor: pointer;
     display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: 4px;
-    transition: all 0.3s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
     animation: mine-float 3s ease-in-out infinite;
-    box-shadow: 0 4px 30px rgba(192,57,43,0.12), 0 0 60px rgba(192,57,43,0.06);
+    box-shadow: 0 2px 20px rgba(192,57,43,0.1);
+    will-change: transform;
   }
   .unlock-btn:hover {
-    transform: scale(1.08); border-color: var(--danger-light);
-    box-shadow: 0 4px 40px rgba(192,57,43,0.2), 0 0 80px rgba(192,57,43,0.1);
-    animation: none;
+    transform: scale(1.05); border-color: var(--danger-light);
+    box-shadow: 0 4px 30px rgba(192,57,43,0.15);
+    animation-play-state: paused; /* Pausar al interactuar */
   }
   .unlock-btn:active { transform: scale(0.95); }
-  @keyframes mine-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+  @keyframes mine-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 
   .unlock-btn::before {
     content: ''; position: absolute; inset: -18px;
-    border-radius: 50%; border: 2px dashed rgba(192,57,43,0.2);
-    animation: spike-rotate 12s linear infinite;
+    border-radius: 50%; border: 2px dashed rgba(192,57,43,0.15);
+    animation: spike-rotate 20s linear infinite; /* Más lento */
   }
   @keyframes spike-rotate { to { transform: rotate(360deg); } }
 
-  .mine-icon { font-size: 40px; filter: drop-shadow(0 2px 8px rgba(192,57,43,0.3)); }
+  .mine-icon { font-size: 40px; filter: drop-shadow(0 2px 4px rgba(192,57,43,0.2)); }
   .mine-text {
     font-family: var(--font-display); font-size: 9px; font-weight: 900;
     letter-spacing: 2px; text-transform: uppercase; color: var(--danger);
   }
 
   .sonar-ring {
-    position: absolute; border: 1px solid rgba(192,57,43,0.2);
+    position: absolute; border: 1px solid rgba(192,57,43,0.15);
     border-radius: 50%; width: 140px; height: 140px;
-    animation: sonar 3s ease-out infinite;
+    animation: sonar 4s ease-out infinite; /* Más lento */
+    will-change: transform, opacity;
   }
-  .sonar-ring:nth-child(2) { animation-delay: 1s; }
-  .sonar-ring:nth-child(3) { animation-delay: 2s; }
-  @keyframes sonar { 0% { transform: scale(1); opacity: 0.5; } 100% { transform: scale(3); opacity: 0; } }
+  .sonar-ring:nth-child(2) { animation-delay: 1.3s; }
+  .sonar-ring:nth-child(3) { animation-delay: 2.6s; }
+  @keyframes sonar { 
+    0% { transform: scale(1); opacity: 0.4; } 
+    100% { transform: scale(2.5); opacity: 0; } 
+  }
 
   .unlock-coords {
     font-family: var(--font-mono);
@@ -147,15 +161,16 @@
     margin-top: 20px; letter-spacing: 2px;
   }
 
-  /* ── HUD ── */
+  /* ── HUD SIMPLIFICADO ── */
   #hud {
     position: fixed; top: 0; left: 0; right: 0; z-index: 100;
     display: flex; align-items: center; justify-content: space-between;
     padding: 10px 20px;
     background: var(--hud-bg);
     border-bottom: 1px solid var(--hud-border);
-    backdrop-filter: blur(14px);
+    /* backdrop-filter: blur(14px); ELIMINADO para móviles - se agrega vía JS en desktop */
     transform: translateY(-100%); transition: transform 0.5s ease;
+    contain: layout style paint; /* Contención de renderizado */
   }
   #hud.visible { transform: translateY(0); }
 
@@ -191,10 +206,10 @@
     padding: 8px 16px; border: 1px solid var(--hud-border);
     background: var(--accent-bg); color: var(--accent);
     cursor: pointer; transition: all 0.2s ease; border-radius: 4px;
+    touch-action: manipulation; /* Optimización táctil */
   }
   .btn:hover {
     background: rgba(14,124,95,0.14); border-color: var(--accent);
-    box-shadow: 0 2px 12px rgba(14,124,95,0.1);
   }
   .btn.btn-gold { color: var(--gold); border-color: rgba(199,140,6,0.25); background: var(--gold-bg); }
   .btn.btn-gold:hover { background: rgba(199,140,6,0.14); border-color: var(--gold); }
@@ -206,21 +221,24 @@
   }
   select.btn option { background: var(--surface); color: var(--text-primary); }
 
-  /* ── GRID ── */
+  /* ── GRID OPTIMIZADO ── */
   #grid-wrapper {
     position: fixed; z-index: 50; display: flex;
     align-items: center; justify-content: center;
     inset: 0; padding-top: 52px; pointer-events: none;
     opacity: 0; transition: opacity 0.6s ease 0.3s;
+    contain: layout style paint;
   }
   #grid-wrapper.visible { opacity: 1; }
 
   #grid {
     display: grid; pointer-events: all;
     border: 1px solid var(--hud-border);
-    box-shadow: 0 4px 40px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+    box-shadow: 0 2px 20px rgba(0,0,0,0.08);
     position: relative; background: transparent;
     border-radius: 4px; overflow: hidden;
+    contain: strict; /* Aislamiento máximo de renderizado */
+    will-change: transform;
   }
 
   .cell {
@@ -229,16 +247,26 @@
     font-family: var(--font-display); font-weight: 700;
     font-size: calc(var(--cell-size) * 0.45);
     cursor: pointer; position: relative;
-    transition: background 0.15s ease, transform 0.1s ease;
     border: 1px solid var(--grid-line);
     background: var(--cell-hidden);
-    backdrop-filter: blur(3px);
+    /* Eliminado backdrop-filter de celdas - muy costoso */
+    contain: layout style paint;
+    will-change: background-color, transform;
+    touch-action: manipulation;
   }
+  
+  /* Optimización: Solo animar transform y opacity */
   .cell:not(.revealed):not(.game-over-cell):hover {
     background: var(--cell-hover); z-index: 2;
-    transform: scale(1.04); border-color: rgba(14,124,95,0.3);
+    transform: scale(1.02); 
+    border-color: rgba(14,124,95,0.3);
   }
-  .cell.revealed { background: var(--cell-revealed); cursor: default; border-color: rgba(60,80,90,0.06); }
+  .cell.revealed { 
+    background: var(--cell-revealed); 
+    cursor: default; 
+    border-color: rgba(60,80,90,0.06);
+    transform: none !important;
+  }
   .cell.revealed.empty { color: transparent; }
 
   .cell.n1 { color: #2980b9; } .cell.n2 { color: #27ae60; }
@@ -248,90 +276,99 @@
 
   .cell.flagged::after {
     content: '⚑'; font-size: calc(var(--cell-size) * 0.55);
-    color: var(--danger); filter: drop-shadow(0 1px 4px rgba(192,57,43,0.3));
-    animation: flag-plant 0.25s ease-out;
+    color: var(--danger); 
+    filter: drop-shadow(0 1px 2px rgba(192,57,43,0.2));
+    animation: flag-plant 0.2s ease-out;
   }
   @keyframes flag-plant {
     0% { transform: scale(0) rotate(-30deg); opacity: 0; }
-    60% { transform: scale(1.2) rotate(5deg); opacity: 1; }
+    60% { transform: scale(1.1) rotate(5deg); opacity: 1; }
     100% { transform: scale(1) rotate(0); opacity: 1; }
   }
 
-  .cell.mine-hit { background: var(--cell-mine-hit) !important; animation: mine-explode 0.4s ease-out; }
+  .cell.mine-hit { 
+    background: var(--cell-mine-hit) !important; 
+    animation: mine-explode 0.3s ease-out; 
+  }
   .cell.mine-show::after { content: '💣'; font-size: calc(var(--cell-size) * 0.5); }
   @keyframes mine-explode {
     0% { transform: scale(1); }
-    30% { transform: scale(1.3); background: rgba(231,76,60,0.3); }
+    30% { transform: scale(1.2); background: rgba(231,76,60,0.4); }
     100% { transform: scale(1); }
   }
 
   /* ══════════════════════════════════════════
-     FULLSCREEN RESULT OVERLAYS
+     FULLSCREEN RESULT OVERLAYS OPTIMIZADOS
      ══════════════════════════════════════════ */
   #explosion-screen, #victory-screen {
     position: fixed; inset: 0; z-index: 600;
     display: none; align-items: center; justify-content: center;
-    flex-direction: column; backdrop-filter: blur(12px);
+    flex-direction: column;
+    /* backdrop-filter: blur(12px); ELIMINADO para móviles */
+    background: rgba(250,248,242,0.98);
+    contain: strict;
   }
   #explosion-screen {
-    background: radial-gradient(circle at center, rgba(231,76,60,0.08) 0%, rgba(250,248,242,0.95) 70%);
+    background: radial-gradient(circle at center, rgba(231,76,60,0.1) 0%, rgba(250,248,242,0.98) 70%);
   }
   #victory-screen {
-    background: radial-gradient(circle at center, rgba(14,124,95,0.06) 0%, rgba(250,248,242,0.95) 70%);
+    background: radial-gradient(circle at center, rgba(14,124,95,0.08) 0%, rgba(250,248,242,0.98) 70%);
     overflow: hidden;
   }
   #explosion-screen.active, #victory-screen.active { display: flex; }
 
   .explosion-emoji, .victory-emoji {
     font-size: clamp(50px, 10vw, 100px);
-    animation: bounce-in 0.6s cubic-bezier(0.17, 0.89, 0.32, 1.28) both;
+    animation: bounce-in 0.5s cubic-bezier(0.17, 0.89, 0.32, 1.28) both;
+    will-change: transform;
   }
   @keyframes bounce-in {
     0% { transform: scale(0) rotate(-15deg); opacity: 0; }
-    70% { transform: scale(1.15) rotate(3deg); }
+    70% { transform: scale(1.1) rotate(3deg); }
     100% { transform: scale(1) rotate(0); opacity: 1; }
   }
 
   .explosion-text {
     font-family: var(--font-handwritten);
-    font-size: clamp(50px, 14vw, 150px);
+    font-size: clamp(40px, 12vw, 120px);
     color: var(--danger);
-    text-shadow: 0 3px 0 #922b21, 0 0 40px rgba(192,57,43,0.2);
-    letter-spacing: 4px;
-    animation: explosion-in 0.6s cubic-bezier(0.17, 0.89, 0.32, 1.28) both;
+    text-shadow: 0 2px 0 #922b21;
+    letter-spacing: 2px;
+    animation: explosion-in 0.5s cubic-bezier(0.17, 0.89, 0.32, 1.28) both;
     text-align: center; line-height: 1;
+    will-change: transform, filter;
   }
   @keyframes explosion-in {
-    0% { transform: scale(3) rotate(-5deg); opacity: 0; filter: blur(20px); }
-    60% { transform: scale(0.95) rotate(1deg); opacity: 1; filter: blur(0); }
+    0% { transform: scale(2) rotate(-5deg); opacity: 0; filter: blur(10px); }
+    60% { transform: scale(0.98) rotate(1deg); opacity: 1; filter: blur(0); }
     100% { transform: scale(1) rotate(0); }
   }
 
   .explosion-sub {
     font-family: var(--font-mono);
     font-size: clamp(12px, 2.5vw, 18px);
-    color: rgba(192,57,43,0.55);
-    margin-top: 16px; letter-spacing: 3px;
-    animation: fade-up 0.5s ease 0.4s both;
+    color: rgba(192,57,43,0.7);
+    margin-top: 16px; letter-spacing: 2px;
+    animation: fade-up 0.4s ease 0.3s both;
   }
 
   .victory-title {
     font-family: var(--font-handwritten);
     font-size: clamp(30px, 8vw, 80px);
     color: var(--gold);
-    text-shadow: 0 3px 0 #a67c05, 0 0 30px rgba(199,140,6,0.2);
+    text-shadow: 0 2px 0 #a67c05;
     text-align: center; line-height: 1.1;
-    animation: explosion-in 0.6s cubic-bezier(0.17, 0.89, 0.32, 1.28) 0.2s both;
+    animation: explosion-in 0.5s cubic-bezier(0.17, 0.89, 0.32, 1.28) 0.2s both;
     max-width: 90vw;
   }
 
   .victory-message {
     font-family: var(--font-mono);
     font-size: clamp(13px, 2.5vw, 20px);
-    color: rgba(44,62,64,0.7);
+    color: rgba(44,62,64,0.8);
     text-align: center; max-width: 600px; line-height: 1.7;
     padding: 0 20px;
-    animation: fade-up 0.5s ease 0.5s both;
+    animation: fade-up 0.4s ease 0.4s both;
   }
 
   .victory-image-slot {
@@ -341,7 +378,7 @@
     border-radius: 12px;
     display: flex; align-items: center; justify-content: center;
     flex-direction: column; gap: 6px;
-    animation: fade-up 0.5s ease 0.4s both;
+    animation: fade-up 0.4s ease 0.3s both;
     overflow: hidden; background: rgba(199,140,6,0.03);
     margin: 10px 0;
   }
@@ -353,46 +390,50 @@
   .result-stats {
     margin-top: 14px; padding: 14px 28px;
     border: 1px solid var(--hud-border);
-    background: rgba(255,255,255,0.5);
+    background: rgba(255,255,255,0.9);
     font-size: 13px; color: var(--text-dim);
-    animation: fade-up 0.5s ease 0.7s both;
+    animation: fade-up 0.4s ease 0.5s both;
     text-align: center; line-height: 1.8; border-radius: 6px;
   }
   .result-stats strong { color: var(--accent); }
 
   .result-actions {
     margin-top: 20px; display: flex; gap: 12px;
-    animation: fade-up 0.5s ease 0.8s both;
+    animation: fade-up 0.4s ease 0.6s both;
   }
   @keyframes fade-up {
-    from { transform: translateY(15px); opacity: 0; }
+    from { transform: translateY(10px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
   }
 
+  /* Partículas optimizadas - menos cantidad en móviles */
   .fire-particle {
-    position: absolute; width: 6px; height: 6px; border-radius: 50%;
+    position: absolute; width: 4px; height: 4px; border-radius: 50%;
     background: radial-gradient(circle, #e67e22, #c0392b);
     animation: fire-rise linear forwards; pointer-events: none;
+    will-change: transform, opacity;
   }
   @keyframes fire-rise {
     0% { opacity: 0.8; transform: translateY(0) scale(1); }
-    100% { opacity: 0; transform: translateY(-200px) scale(0); }
+    100% { opacity: 0; transform: translateY(-150px) scale(0); }
   }
 
   .confetti {
-    position: absolute; width: 8px; height: 8px;
+    position: absolute; width: 6px; height: 6px;
     animation: confetti-fall linear forwards; pointer-events: none;
+    will-change: transform;
   }
   @keyframes confetti-fall {
     0% { opacity: 1; transform: translateY(-20px) rotate(0deg); }
-    100% { opacity: 0; transform: translateY(100vh) rotate(720deg); }
+    100% { opacity: 0; transform: translateY(100vh) rotate(360deg); }
   }
 
-  /* ══ MODALS ══ */
+  /* ══ MODALS OPTIMIZADOS ══ */
   .modal-backdrop {
     position: fixed; inset: 0; z-index: 300;
     display: none; align-items: center; justify-content: center;
-    background: rgba(250,248,242,0.8); backdrop-filter: blur(8px);
+    background: rgba(250,248,242,0.95); /* Sólido en lugar de blur */
+    /* backdrop-filter: blur(8px); Solo en desktop */
   }
   .modal-backdrop.active { display: flex; }
 
@@ -400,12 +441,13 @@
     text-align: center; padding: 36px 44px;
     border: 1px solid var(--hud-border);
     background: white; border-radius: 8px;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.08);
+    box-shadow: 0 4px 30px rgba(0,0,0,0.1);
     min-width: 320px; max-width: 90vw;
-    animation: box-pop 0.35s ease both;
+    animation: box-pop 0.3s ease both;
+    contain: layout style paint;
   }
   @keyframes box-pop {
-    from { transform: scale(0.85) translateY(15px); opacity: 0; }
+    from { transform: scale(0.9) translateY(10px); opacity: 0; }
     to { transform: scale(1) translateY(0); opacity: 1; }
   }
   .modal-box h2 {
@@ -416,12 +458,13 @@
   .modal-box p { color: var(--text-dim); font-size: 13px; margin-bottom: 20px; }
 
   .modal-box input[type="text"] {
-    width: 100%; padding: 10px 14px;
+    width: 100%; padding: 12px 16px; /* Más grande para táctil */
     font-family: var(--font-mono); font-size: 16px;
     background: var(--surface); color: var(--text-primary);
     border: 1px solid var(--hud-border); outline: none;
     text-align: center; letter-spacing: 1px; margin-bottom: 16px;
     border-radius: 4px; transition: border-color 0.2s;
+    -webkit-appearance: none; /* Eliminar estilos nativos móviles */
   }
   .modal-box input[type="text"]:focus { border-color: var(--accent); }
   .modal-box input[type="text"]::placeholder { color: var(--text-dim); }
@@ -430,11 +473,12 @@
   #leaderboard-panel {
     position: fixed; top: 52px; left: 0; bottom: 0;
     z-index: 150; width: 360px;
-    background: rgba(255,255,255,0.95);
+    background: rgba(255,255,255,0.98);
     border-right: 1px solid var(--hud-border);
-    backdrop-filter: blur(14px);
+    /* backdrop-filter: blur(14px); Eliminado */
     transform: translateX(-100%); transition: transform 0.3s ease;
     display: flex; flex-direction: column; overflow: hidden;
+    contain: strict;
   }
   #leaderboard-panel.open { transform: translateX(0); }
   .lb-header {
@@ -442,7 +486,7 @@
     display: flex; align-items: center; justify-content: space-between;
   }
   .lb-header h3 { font-family: var(--font-display); font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); }
-  .lb-close { font-size: 18px; cursor: pointer; color: var(--text-dim); background: none; border: none; transition: color 0.2s; }
+  .lb-close { font-size: 24px; cursor: pointer; color: var(--text-dim); background: none; border: none; padding: 0 4px; transition: color 0.2s; touch-action: manipulation; }
   .lb-close:hover { color: var(--accent); }
   .lb-filters {
     padding: 12px 20px; display: flex; gap: 6px; flex-wrap: wrap;
@@ -451,16 +495,17 @@
   .lb-filter-btn {
     font-family: var(--font-display); font-size: 9px; font-weight: 700;
     letter-spacing: 1px; text-transform: uppercase;
-    padding: 5px 10px; cursor: pointer; border-radius: 4px;
+    padding: 6px 12px; cursor: pointer; border-radius: 4px;
     border: 1px solid rgba(14,124,95,0.15);
     background: transparent; color: var(--text-dim); transition: all 0.2s;
+    touch-action: manipulation;
   }
   .lb-filter-btn:hover { color: var(--accent); border-color: var(--accent); }
   .lb-filter-btn.active { color: var(--accent); border-color: var(--accent); background: var(--accent-bg); }
-  .lb-list { flex: 1; overflow-y: auto; padding: 8px 0; scrollbar-width: thin; }
+  .lb-list { flex: 1; overflow-y: auto; padding: 8px 0; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
   .lb-row {
     display: grid; grid-template-columns: 36px 1fr 70px 60px;
-    align-items: center; padding: 10px 20px; gap: 8px;
+    align-items: center; padding: 12px 20px; gap: 8px;
     border-bottom: 1px solid rgba(0,0,0,0.03); transition: background 0.15s;
   }
   .lb-row:hover { background: rgba(14,124,95,0.03); }
@@ -485,29 +530,86 @@
   #config-panel {
     position: fixed; top: 52px; right: 0; z-index: 150;
     width: 260px; padding: 20px;
-    background: rgba(255,255,255,0.95);
+    background: rgba(255,255,255,0.98);
     border-left: 1px solid var(--hud-border);
     border-bottom: 1px solid var(--hud-border);
-    backdrop-filter: blur(14px);
+    /* backdrop-filter: blur(14px); Eliminado */
     transform: translateX(100%); transition: transform 0.3s ease;
+    contain: layout style paint;
   }
   #config-panel.open { transform: translateX(0); }
   .cfg-title { font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); margin-bottom: 16px; }
   .cfg-group { margin-bottom: 14px; }
   .cfg-group label { display: block; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; }
-  .cfg-group input[type="range"] { width: 100%; accent-color: var(--accent); }
+  .cfg-group input[type="range"] { width: 100%; accent-color: var(--accent); touch-action: manipulation; }
   .cfg-group .cfg-val { font-family: var(--font-display); font-size: 16px; font-weight: 700; color: var(--accent); }
 
-  @media (max-width: 700px) {
-    #hud { padding: 8px 12px; gap: 8px; flex-wrap: wrap; justify-content: center; }
-    #hud .brand { font-size: 12px; }
-    .stat-value { font-size: 16px; }
-    .hud-stats { gap: 14px; }
-    .btn { font-size: 9px; padding: 6px 10px; }
-    #config-panel { width: 220px; }
-    #leaderboard-panel { width: 100%; }
-    .player-tag { font-size: 9px; }
-    .unlock-btn { width: 110px; height: 110px; }
+  /* ═══ MEDIA QUERIES MÓVIL ESPECÍFICOS ═══ */
+  @media (max-width: 768px), (pointer: coarse) {
+    :root {
+      --hud-bg: rgba(245, 243, 237, 1); /* Sólido en móviles */
+    }
+    
+    /* Desactivar efectos costosos en móviles */
+    #scanlines { display: none; }
+    
+    /* Grid más eficiente */
+    #grid {
+      box-shadow: 0 1px 10px rgba(0,0,0,0.1); /* Sombra más ligera */
+    }
+    
+    .cell {
+      border-width: 0.5px; /* Bordes más finos */
+      /* Eliminar hover en móviles (no hay cursor) */
+    }
+    .cell:not(.revealed):not(.game-over-cell):hover {
+      transform: none;
+      background: var(--cell-hidden);
+    }
+    .cell:not(.revealed):not(.game-over-cell):active {
+      background: var(--cell-hover);
+      transform: scale(0.95);
+    }
+    
+    /* HUD más compacto */
+    #hud { padding: 8px 12px; }
+    #hud .brand { font-size: 11px; letter-spacing: 2px; }
+    #hud .brand span { display: none; } /* Ocultar subtítulo en móviles pequeños */
+    .stat-value { font-size: 16px; min-width: 40px; }
+    .hud-stats { gap: 16px; }
+    .btn { padding: 10px 14px; font-size: 10px; } /* Más grande para tacto */
+    
+    /* Leaderboard full width en móviles */
+    #leaderboard-panel { width: 100%; top: 0; }
+    #config-panel { width: 100%; top: 0; height: auto; max-height: 80vh; }
+    
+    /* Animaciones más rápidas */
+    .unlock-btn { width: 120px; height: 120px; }
+    .sonar-ring { animation-duration: 3s; }
+    
+    /* Reduce motion para accesibilidad */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  }
+
+  @media (max-width: 480px) {
+    .hud-actions select.btn { max-width: 100px; }
+    .stat-label { font-size: 8px; }
+    .explosion-text { font-size: clamp(32px, 15vw, 60px); }
+  }
+  
+  /* Clase para detectar touch */
+  body.is-touch .cell {
+    /* Optimizaciones específicas para touch */
+    touch-action: manipulation;
+  }
+  body.is-touch .unlock-btn {
+    animation: none; /* Detener flotación en touch */
   }
 </style>
 </head>
@@ -538,7 +640,7 @@
   <div class="modal-box">
     <h2>⚓ IDENTIFICATION</h2>
     <p>Enter your callsign to access the operations zone</p>
-    <input type="text" id="name-input" placeholder="Your name..." maxlength="30" autocomplete="off" spellcheck="false">
+    <input type="text" id="name-input" placeholder="Your name..." maxlength="20" autocomplete="off" spellcheck="false">
     <br>
     <button class="btn" id="btn-name-ok">▶ ENTER ZONE</button>
   </div>
@@ -546,8 +648,8 @@
 
 <!-- HUD -->
 <div id="hud">
-  <div style="display:flex;align-items:center;gap:14px;">
-    <div class="brand">SEARCHINS<br><span>Strait of Hormuz · Operations Zone</span></div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div class="brand">SEARCHINS<br><span>Strait of Hormuz</span></div>
     <div class="player-tag" id="player-tag" title="Change name">—</div>
   </div>
   <div class="hud-stats">
@@ -571,9 +673,9 @@
 <!-- CONFIG -->
 <div id="config-panel">
   <div class="cfg-title">⚙ Settings</div>
-  <div class="cfg-group"><label>Rows: <span class="cfg-val" id="cfg-rows-val">16</span></label><input type="range" id="cfg-rows" min="5" max="30" value="16"></div>
-  <div class="cfg-group"><label>Columns: <span class="cfg-val" id="cfg-cols-val">16</span></label><input type="range" id="cfg-cols" min="5" max="40" value="16"></div>
-  <div class="cfg-group"><label>Mines: <span class="cfg-val" id="cfg-mines-val">40</span></label><input type="range" id="cfg-mines" min="1" max="200" value="40"></div>
+  <div class="cfg-group"><label>Rows: <span class="cfg-val" id="cfg-rows-val">16</span></label><input type="range" id="cfg-rows" min="5" max="25" value="16"></div>
+  <div class="cfg-group"><label>Columns: <span class="cfg-val" id="cfg-cols-val">16</span></label><input type="range" id="cfg-cols" min="5" max="25" value="16"></div>
+  <div class="cfg-group"><label>Mines: <span class="cfg-val" id="cfg-mines-val">40</span></label><input type="range" id="cfg-mines" min="1" max="150" value="40"></div>
   <button class="btn" id="btn-apply" style="width:100%;margin-top:10px;">▶ APPLY</button>
 </div>
 
@@ -616,22 +718,9 @@
   <div class="victory-emoji">🛢️</div>
   <div class="victory-title">CONGRATULATIONS!</div>
 
-  <!--
-    ╔═══════════════════════════════════════════════════════╗
-    ║  YOUR CUSTOM IMAGE GOES HERE                          ║
-    ║                                                       ║
-    ║  Option 1: Put your image in public/images/ and set:  ║
-    ║    <img src="/images/your-image.png" alt="victory">   ║
-    ║                                                       ║
-    ║  Option 2: Use an external URL:                       ║
-    ║    <img src="https://..." alt="victory">              ║
-    ║                                                       ║
-    ║  Then add class "has-image" to the parent div.        ║
-    ╚═══════════════════════════════════════════════════════╝
-  -->
   <div class="victory-image-slot" id="victory-image">
     <div class="victory-image-placeholder">🍊</div>
-    <div class="victory-image-hint"><img src="/images/orange_agent_epstein.jpeg" alt="victory"></div>
+    <div class="victory-image-hint"><img src="/images/orange_agent_epstein.jpeg" alt="victory" loading="lazy"></div>
   </div>
 
   <div class="victory-message">
@@ -662,11 +751,25 @@
   };
   const HORMUZ_BOUNDS = [[25.5, 54.0], [27.4, 57.8]];
 
+  // Detectar capacidades del dispositivo
+  const isTouch = window.matchMedia('(pointer: coarse)').matches;
+  const isMobile = window.innerWidth <= 768 || isTouch;
+  const isLowPower = navigator.hardwareConcurrency <= 4 || /iPhone|iPad|iPod|Android.*Mobile/.test(navigator.userAgent);
+  
+  // Aplicar clase para optimizaciones CSS
+  if (isTouch) document.body.classList.add('is-touch');
+  
+  // Limites más conservadores en móviles
+  const MAX_ROWS = isMobile ? 25 : 30;
+  const MAX_COLS = isMobile ? 25 : 40;
+  const MAX_MINES_RATIO = 0.5; // Reducido en móviles
+
   let CONFIG = { ...PRESETS.medium };
   let currentPreset = 'medium';
   let playerName = '';
   let board = [], gameState = 'idle', timerInterval = null, seconds = 0;
   let firstClick = true, revealedCount = 0, flagCount = 0, totalSafe = 0;
+  let touchStartTime = 0, touchTimer = null, longPressTriggered = false;
 
   const $ = id => document.getElementById(id);
   const $grid = $('grid'), $minesLeft = $('mines-left'), $timer = $('timer');
@@ -680,23 +783,48 @@
   const $explosionScr = $('explosion-screen'), $victoryScr = $('victory-screen');
   const $hud = $('hud'), $gridWrapper = $('grid-wrapper');
 
-  // MAP
+  // MAP - Configuración optimizada
   const map = L.map('map', {
     zoomControl: false, attributionControl: false,
     dragging: false, scrollWheelZoom: false,
     doubleClickZoom: false, touchZoom: false, keyboard: false,
+    fadeAnimation: !isLowPower, // Desactivar animaciones en móviles lentos
+    zoomAnimation: !isLowPower,
+    markerZoomAnimation: !isLowPower,
+    preferCanvas: true // Usar Canvas en lugar de SVG para mejor rendimiento
   });
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+  
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+    maxZoom: 19,
+    updateWhenIdle: true, // Solo cargar tiles cuando se detiene
+    updateWhenZooming: false,
+    keepBuffer: 2 // Reducir buffer de tiles
+  }).addTo(map);
+  
   map.fitBounds(HORMUZ_BOUNDS, { padding: [10, 10] });
+
+  // Debounce para resize
+  let resizeTimeout;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      document.documentElement.style.setProperty('--cell-size', computeCellSize()+'px');
+      map.invalidateSize(); 
+      map.fitBounds(HORMUZ_BOUNDS, { padding: [10, 10] });
+    }, 100);
+  }, { passive: true });
 
   // UNLOCK
   $('unlock-btn').addEventListener('click', () => {
     $unlockScr.classList.add('hidden');
+    // Pausar animaciones cuando está oculto
+    document.querySelectorAll('.sonar-ring').forEach(el => el.style.animationPlayState = 'paused');
+    
     setTimeout(() => {
       const saved = sessionStorage.getItem('searchins_player');
       if (saved) { playerName = saved; $playerTag.textContent = playerName; activateGame(); }
       else { $nameModal.classList.add('active'); $nameInput.focus(); }
-    }, 600);
+    }, 300); // Reducido de 600ms
   });
 
   function activateGame() {
@@ -709,7 +837,7 @@
   $('btn-name-ok').addEventListener('click', confirmName);
   $nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') confirmName(); });
   function confirmName() {
-    const name = $nameInput.value.trim();
+    const name = $nameInput.value.trim().substring(0, 12); // Limitar longitud
     if (!name) { $nameInput.style.borderColor = 'var(--danger)'; return; }
     playerName = name;
     sessionStorage.setItem('searchins_player', name);
@@ -725,93 +853,240 @@
 
   // BOARD
   function createBoard() {
-    board = [];
-    for (let r = 0; r < CONFIG.rows; r++) {
-      board[r] = [];
-      for (let c = 0; c < CONFIG.cols; c++)
-        board[r][c] = { mine: false, revealed: false, flagged: false, count: 0 };
+    // Crear array plano para mejor rendimiento que array de arrays
+    board = new Array(CONFIG.rows * CONFIG.cols);
+    for (let i = 0; i < board.length; i++) {
+      board[i] = { mine: false, revealed: false, flagged: false, count: 0 };
     }
   }
+  
+  function getCellData(r, c) { return board[r * CONFIG.cols + c]; }
+  
   function placeMines(sR, sC) {
     let placed = 0;
-    while (placed < CONFIG.mines) {
-      const r = Math.floor(Math.random() * CONFIG.rows);
-      const c = Math.floor(Math.random() * CONFIG.cols);
-      if (Math.abs(r - sR) <= 1 && Math.abs(c - sC) <= 1) continue;
-      if (board[r][c].mine) continue;
-      board[r][c].mine = true; placed++;
+    const totalCells = CONFIG.rows * CONFIG.cols;
+    const startIdx = sR * CONFIG.cols + sC;
+    
+    // Fisher-Yates shuffle más eficiente para grandes cantidades
+    const indices = [];
+    for (let i = 0; i < totalCells; i++) {
+      // Excluir celdas adyacentes al primer click
+      const row = Math.floor(i / CONFIG.cols);
+      const col = i % CONFIG.cols;
+      if (Math.abs(row - sR) <= 1 && Math.abs(col - sC) <= 1) continue;
+      indices.push(i);
     }
-    for (let r = 0; r < CONFIG.rows; r++)
+    
+    // Mezclar solo los primeros N necesarios (optimización)
+    for (let i = indices.length - 1; i > indices.length - CONFIG.mines - 1 && i >= 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [indices[i], indices[j]] = [indices[j], indices[i]];
+      board[indices[i]].mine = true;
+      placed++;
+    }
+    
+    // Calcular números
+    for (let r = 0; r < CONFIG.rows; r++) {
       for (let c = 0; c < CONFIG.cols; c++) {
-        if (board[r][c].mine) continue;
+        const idx = r * CONFIG.cols + c;
+        if (board[idx].mine) continue;
         let cnt = 0;
-        forN(r, c, (nr, nc) => { if (board[nr][nc].mine) cnt++; });
-        board[r][c].count = cnt;
+        forN(r, c, (nr, nc) => { 
+          if (board[nr * CONFIG.cols + nc].mine) cnt++; 
+        });
+        board[idx].count = cnt;
       }
+    }
   }
+  
   function forN(r, c, fn) {
-    for (let dr = -1; dr <= 1; dr++)
-      for (let dc = -1; dc <= 1; dc++) {
-        if (!dr && !dc) continue;
-        const nr = r+dr, nc = c+dc;
-        if (nr >= 0 && nr < CONFIG.rows && nc >= 0 && nc < CONFIG.cols) fn(nr, nc);
+    const startRow = Math.max(0, r-1);
+    const endRow = Math.min(CONFIG.rows-1, r+1);
+    const startCol = Math.max(0, c-1);
+    const endCol = Math.min(CONFIG.cols-1, c+1);
+    
+    for (let nr = startRow; nr <= endRow; nr++) {
+      for (let nc = startCol; nc <= endCol; nc++) {
+        if (nr === r && nc === c) continue;
+        fn(nr, nc);
       }
+    }
   }
 
-  // RENDER
+  // RENDER OPTIMIZADO
   function computeCellSize() {
-    const p = 20, aW = innerWidth - p*2, aH = innerHeight - 52 - p*2;
-    return Math.max(16, Math.min(Math.floor(aW/CONFIG.cols), Math.floor(aH/CONFIG.rows), 48));
+    const p = isMobile ? 8 : 20; // Menos padding en móviles
+    const aW = innerWidth - p*2;
+    const aH = innerHeight - 52 - p*2;
+    return Math.max(isMobile ? 28 : 16, Math.min(Math.floor(aW/CONFIG.cols), Math.floor(aH/CONFIG.rows), isMobile ? 44 : 48));
   }
+  
   function renderGrid() {
     const cs = computeCellSize();
     document.documentElement.style.setProperty('--cell-size', cs+'px');
+    
+    // Usar DocumentFragment para minimizar reflows
+    const fragment = document.createDocumentFragment();
     $grid.innerHTML = '';
     $grid.style.gridTemplateColumns = `repeat(${CONFIG.cols}, var(--cell-size))`;
     $grid.style.gridTemplateRows = `repeat(${CONFIG.rows}, var(--cell-size))`;
-    for (let r = 0; r < CONFIG.rows; r++)
-      for (let c = 0; c < CONFIG.cols; c++) {
-        const el = document.createElement('div');
-        el.className = 'cell';
-        el.addEventListener('click', () => onLeft(r, c));
-        el.addEventListener('contextmenu', e => { e.preventDefault(); onRight(r, c); });
-        let lt = null;
-        el.addEventListener('touchstart', e => {
-          lt = setTimeout(() => { e.preventDefault(); onRight(r, c); lt = null; }, 400);
-        }, { passive: false });
-        el.addEventListener('touchend', () => { if (lt) clearTimeout(lt); });
-        el.addEventListener('touchmove', () => { if (lt) clearTimeout(lt); });
-        $grid.appendChild(el);
-      }
+    
+    const totalCells = CONFIG.rows * CONFIG.cols;
+    
+    for (let i = 0; i < totalCells; i++) {
+      const el = document.createElement('div');
+      el.className = 'cell';
+      el.dataset.index = i;
+      
+      // Delegación de eventos en lugar de listeners individuales
+      fragment.appendChild(el);
+    }
+    
+    $grid.appendChild(fragment);
+    
+    // Event delegation para el grid
+    $grid.addEventListener('click', handleGridClick);
+    $grid.addEventListener('contextmenu', handleGridRightClick);
+    
+    // Touch events optimizados
+    if (isTouch) {
+      $grid.addEventListener('touchstart', handleTouchStart, { passive: false });
+      $grid.addEventListener('touchend', handleTouchEnd, { passive: false });
+      $grid.addEventListener('touchmove', handleTouchMove, { passive: true });
+    }
   }
-  function getCell(r, c) { return $grid.children[r * CONFIG.cols + c]; }
+  
+  function getCellEl(r, c) { 
+    return $grid.children[r * CONFIG.cols + c]; 
+  }
+  
+  function getCoordsFromEl(el) {
+    const idx = parseInt(el.dataset.index);
+    return {
+      r: Math.floor(idx / CONFIG.cols),
+      c: idx % CONFIG.cols
+    };
+  }
 
-  // ACTIONS
+  // MANEJADORES DE EVENTOS OPTIMIZADOS
+  function handleGridClick(e) {
+    if (!e.target.classList.contains('cell')) return;
+    const { r, c } = getCoordsFromEl(e.target);
+    onLeft(r, c);
+  }
+  
+  function handleGridRightClick(e) {
+    e.preventDefault();
+    if (!e.target.classList.contains('cell')) return;
+    const { r, c } = getCoordsFromEl(e.target);
+    onRight(r, c);
+  }
+  
+  function handleTouchStart(e) {
+    if (!e.target.classList.contains('cell')) return;
+    touchStartTime = Date.now();
+    longPressTriggered = false;
+    const target = e.target;
+    
+    // Timer para long press (bandera)
+    touchTimer = setTimeout(() => {
+      longPressTriggered = true;
+      const { r, c } = getCoordsFromEl(target);
+      onRight(r, c);
+      // Feedback táctil
+      if (navigator.vibrate) navigator.vibrate(50);
+    }, 400);
+  }
+  
+  function handleTouchEnd(e) {
+    if (touchTimer) {
+      clearTimeout(touchTimer);
+      touchTimer = null;
+    }
+    
+    if (!e.target.classList.contains('cell')) return;
+    
+    // Si no fue long press, es click normal
+    if (!longPressTriggered && Date.now() - touchStartTime < 400) {
+      const { r, c } = getCoordsFromEl(e.target);
+      onLeft(r, c);
+    }
+  }
+  
+  function handleTouchMove(e) {
+    // Cancelar si se mueve el dedo
+    if (touchTimer) {
+      clearTimeout(touchTimer);
+      touchTimer = null;
+    }
+  }
+
+  // ACCIONES DEL JUEGO
   function onLeft(r, c) {
     if (gameState === 'won' || gameState === 'lost') return;
-    const cell = board[r][c];
+    const cell = getCellData(r, c);
     if (cell.flagged || cell.revealed) return;
-    if (firstClick) { firstClick = false; placeMines(r, c); startTimer(); gameState = 'playing'; }
-    if (cell.mine) { gameOver(r, c); return; }
-    reveal(r, c); checkWin();
+    
+    if (firstClick) { 
+      firstClick = false; 
+      placeMines(r, c); 
+      startTimer(); 
+      gameState = 'playing'; 
+    }
+    
+    if (cell.mine) { 
+      gameOver(r, c); 
+      return; 
+    }
+    
+    // Reveal iterativo para evitar stack overflow en grids grandes
+    revealIterative(r, c);
+    checkWin();
   }
+  
   function onRight(r, c) {
     if (gameState === 'won' || gameState === 'lost') return;
-    const cell = board[r][c];
+    const cell = getCellData(r, c);
     if (cell.revealed) return;
+    
     cell.flagged = !cell.flagged;
     flagCount += cell.flagged ? 1 : -1;
-    getCell(r, c).classList.toggle('flagged', cell.flagged);
+    getCellEl(r, c).classList.toggle('flagged', cell.flagged);
     updateHUD();
   }
-  function reveal(r, c) {
-    const cell = board[r][c];
-    if (cell.revealed || cell.flagged || cell.mine) return;
-    cell.revealed = true; revealedCount++;
-    const el = getCell(r, c);
-    el.classList.add('revealed');
-    if (cell.count > 0) { el.textContent = cell.count; el.classList.add('n'+cell.count); }
-    else { el.classList.add('empty'); forN(r, c, (nr, nc) => reveal(nr, nc)); }
+  
+  // Reveal iterativo (evita recursion stack en grids grandes)
+  function revealIterative(startR, startC) {
+    const stack = [[startR, startC]];
+    const visited = new Set();
+    visited.add(`${startR},${startC}`);
+    
+    while (stack.length > 0) {
+      const [r, c] = stack.pop();
+      const cell = getCellData(r, c);
+      
+      if (cell.revealed || cell.flagged || cell.mine) continue;
+      
+      cell.revealed = true;
+      revealedCount++;
+      const el = getCellEl(r, c);
+      el.classList.add('revealed');
+      
+      if (cell.count > 0) {
+        el.textContent = cell.count;
+        el.classList.add('n' + cell.count);
+      } else {
+        el.classList.add('empty');
+        // Agregar vecinos a la pila
+        forN(r, c, (nr, nc) => {
+          const key = `${nr},${nc}`;
+          if (!visited.has(key)) {
+            visited.add(key);
+            stack.push([nr, nc]);
+          }
+        });
+      }
+    }
     updateHUD();
   }
 
@@ -820,178 +1095,356 @@
     if (revealedCount === totalSafe) {
       gameState = 'won'; stopTimer();
       document.body.classList.add('game-won');
-      for (let r = 0; r < CONFIG.rows; r++)
-        for (let c = 0; c < CONFIG.cols; c++)
-          if (board[r][c].mine && !board[r][c].flagged) {
-            board[r][c].flagged = true; getCell(r, c).classList.add('flagged');
+      
+      // Auto-flag minas restantes (optimizado)
+      for (let r = 0; r < CONFIG.rows; r++) {
+        for (let c = 0; c < CONFIG.cols; c++) {
+          const cell = getCellData(r, c);
+          if (cell.mine && !cell.flagged) {
+            cell.flagged = true;
+            getCellEl(r, c).classList.add('flagged');
           }
-      setTimeout(showVictory, 600);
+        }
+      }
+      setTimeout(showVictory, 400);
       saveScore('win');
     }
   }
+  
   function gameOver(hR, hC) {
     gameState = 'lost'; stopTimer();
     document.body.classList.add('game-lost');
-    getCell(hR, hC).classList.add('mine-hit', 'mine-show');
-    let d = 60;
-    for (let r = 0; r < CONFIG.rows; r++)
-      for (let c = 0; c < CONFIG.cols; c++)
-        if (board[r][c].mine && !(r === hR && c === hC)) {
-          setTimeout(() => getCell(r, c).classList.add('mine-show', 'revealed', 'game-over-cell'), d);
-          d += 25;
+    getCellEl(hR, hC).classList.add('mine-hit', 'mine-show');
+    
+    // Revelar minas con requestAnimationFrame para no bloquear UI
+    let d = 0;
+    const mines = [];
+    for (let r = 0; r < CONFIG.rows; r++) {
+      for (let c = 0; c < CONFIG.cols; c++) {
+        if (getCellData(r, c).mine && !(r === hR && c === hC)) {
+          mines.push([r, c]);
         }
-    setTimeout(showExplosion, d + 400);
+      }
+    }
+    
+    function revealNextBatch() {
+      const batch = mines.splice(0, 5); // Procesar de 5 en 5
+      batch.forEach(([r, c]) => {
+        getCellEl(r, c).classList.add('mine-show', 'revealed', 'game-over-cell');
+      });
+      
+      if (mines.length > 0) {
+        requestAnimationFrame(revealNextBatch);
+      } else {
+        setTimeout(showExplosion, 300);
+      }
+    }
+    requestAnimationFrame(revealNextBatch);
     saveScore('loss');
   }
 
   function showExplosion() {
     $('explosion-stats').innerHTML = `Time: <strong>${fmtT(seconds)}s</strong> · Cells: <strong>${revealedCount}</strong> · Flags: <strong>${flagCount}</strong>`;
     $explosionScr.classList.add('active');
-    for (let i = 0; i < 30; i++) {
+    
+    // Menos partículas en móviles
+    const particleCount = isMobile ? 15 : 30;
+    for (let i = 0; i < particleCount; i++) {
       const p = document.createElement('div');
       p.className = 'fire-particle';
       p.style.left = Math.random()*100+'%';
       p.style.top = (40+Math.random()*40)+'%';
-      p.style.animationDuration = (1+Math.random()*2)+'s';
-      p.style.animationDelay = (Math.random()*0.8)+'s';
-      p.style.width = p.style.height = (4+Math.random()*8)+'px';
+      p.style.animationDuration = (0.8+Math.random()*1.5)+'s';
+      p.style.animationDelay = (Math.random()*0.4)+'s';
+      p.style.width = p.style.height = (3+Math.random()*6)+'px';
       $explosionScr.appendChild(p);
-      setTimeout(() => p.remove(), 3500);
+      setTimeout(() => p.remove(), 2500);
     }
   }
 
   function showVictory() {
     $('victory-stats').innerHTML = `Time: <strong>${fmtT(seconds)}s</strong> · Grid: <strong>${CONFIG.rows}×${CONFIG.cols}</strong> · Mines: <strong>${CONFIG.mines}</strong>`;
     $victoryScr.classList.add('active');
+    
     const cols = ['#c78c06','#c0392b','#0e7c5f','#8e44ad','#2980b9','#d35400'];
-    for (let i = 0; i < 60; i++) {
+    const confettiCount = isMobile ? 30 : 60;
+    
+    for (let i = 0; i < confettiCount; i++) {
       const c = document.createElement('div');
       c.className = 'confetti';
-      c.style.left = Math.random()*100+'%'; c.style.top = '-10px';
-      c.style.width = (5+Math.random()*8)+'px'; c.style.height = (5+Math.random()*8)+'px';
+      c.style.left = Math.random()*100+'%'; 
+      c.style.top = '-10px';
+      c.style.width = (4+Math.random()*6)+'px'; 
+      c.style.height = (4+Math.random()*6)+'px';
       c.style.background = cols[Math.floor(Math.random()*cols.length)];
       c.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
-      c.style.animationDuration = (2+Math.random()*3)+'s';
-      c.style.animationDelay = (Math.random()*1.5)+'s';
+      c.style.animationDuration = (1.5+Math.random()*2)+'s';
+      c.style.animationDelay = (Math.random()*1)+'s';
       $victoryScr.appendChild(c);
-      setTimeout(() => c.remove(), 5000);
+      setTimeout(() => c.remove(), 4000);
     }
   }
 
   // TIMER
-  function startTimer() { seconds = 0; timerInterval = setInterval(() => { seconds++; $timer.textContent = fmtT(seconds); }, 1000); }
-  function stopTimer() { if (timerInterval) { clearInterval(timerInterval); timerInterval = null; } }
+  function startTimer() { 
+    seconds = 0; 
+    timerInterval = setInterval(() => { 
+      seconds++; 
+      $timer.textContent = fmtT(seconds); 
+    }, 1000); 
+  }
+  
+  function stopTimer() { 
+    if (timerInterval) { 
+      clearInterval(timerInterval); 
+      timerInterval = null; 
+    } 
+  }
+  
   function fmtT(s) { return String(s).padStart(3, '0'); }
-  function updateHUD() { $minesLeft.textContent = CONFIG.mines - flagCount; $cellsLeft.textContent = totalSafe - revealedCount; }
+  
+  function updateHUD() { 
+    $minesLeft.textContent = CONFIG.mines - flagCount; 
+    $cellsLeft.textContent = totalSafe - revealedCount; 
+  }
 
-  // API
+  // API (simulada si no hay backend)
   async function saveScore(result) {
     try {
+      // Simular storage local si no hay API
+      if (!API_BASE) {
+        const scores = JSON.parse(localStorage.getItem('searchins_scores') || '[]');
+        scores.push({
+          player: playerName, 
+          time: seconds, 
+          result,
+          difficulty: { ...CONFIG, preset: currentPreset },
+          date: new Date().toISOString()
+        });
+        localStorage.setItem('searchins_scores', JSON.stringify(scores.slice(-50))); // Mantener últimos 50
+        return;
+      }
+      
       await fetch(`${API_BASE}/api/scores`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          player: playerName, time: seconds, result,
+          player: playerName, 
+          time: seconds, 
+          result,
           difficulty: { rows: CONFIG.rows, cols: CONFIG.cols, mines: CONFIG.mines, preset: currentPreset },
-          cellsRevealed: revealedCount, flagsUsed: flagCount,
+          cellsRevealed: revealedCount, 
+          flagsUsed: flagCount,
         }),
       });
-    } catch (e) { console.error('Save error:', e); }
+    } catch (e) { 
+      console.error('Save error:', e); 
+    }
   }
 
   async function loadLeaderboard(preset = 'medium') {
-    $lbList.innerHTML = '<div class="lb-loading">Loading ranking...</div>';
+    $lbList.innerHTML = '<div class="lb-loading">Loading...</div>';
+    
     try {
+      // Usar datos locales si no hay API
+      if (!API_BASE) {
+        const scores = JSON.parse(localStorage.getItem('searchins_scores') || '[]');
+        const filtered = scores
+          .filter(s => preset === 'all' || s.difficulty.preset === preset)
+          .filter(s => s.result === 'win')
+          .sort((a, b) => a.time - b.time)
+          .slice(0, 20);
+          
+        renderLeaderboard(filtered);
+        return;
+      }
+      
       const res = await fetch(`${API_BASE}/api/scores/leaderboard?preset=${preset}&limit=20`);
       const data = await res.json();
-      if (!data.success || !data.scores.length) { $lbList.innerHTML = '<div class="lb-empty">No games recorded yet</div>'; return; }
-      $lbList.innerHTML = data.scores.map((s, i) => `
-        <div class="lb-row">
-          <div class="lb-rank">${i+1}</div>
-          <div class="lb-name">${esc(s.player)}</div>
-          <div class="lb-time">${fmtT(s.time)}s</div>
-          <div class="lb-config">${s.difficulty.rows}×${s.difficulty.cols}</div>
-        </div>`).join('');
-    } catch { $lbList.innerHTML = '<div class="lb-empty">Connection error</div>'; }
+      if (!data.success || !data.scores.length) { 
+        $lbList.innerHTML = '<div class="lb-empty">No games recorded yet</div>'; 
+        return; 
+      }
+      renderLeaderboard(data.scores);
+    } catch { 
+      $lbList.innerHTML = '<div class="lb-empty">Connection error</div>'; 
+    }
+  }
+  
+  function renderLeaderboard(scores) {
+    if (!scores.length) {
+      $lbList.innerHTML = '<div class="lb-empty">No games recorded yet</div>';
+      return;
+    }
+    $lbList.innerHTML = scores.map((s, i) => `
+      <div class="lb-row">
+        <div class="lb-rank">${i+1}</div>
+        <div class="lb-name">${esc(s.player)}</div>
+        <div class="lb-time">${fmtT(s.time)}s</div>
+        <div class="lb-config">${s.difficulty.rows}×${s.difficulty.cols}</div>
+      </div>`).join('');
   }
 
   async function loadPlayerStats() {
     if (!playerName) return;
     const ps = $('lb-player-stats');
+    
     try {
+      if (!API_BASE) {
+        const scores = JSON.parse(localStorage.getItem('searchins_scores') || '[]');
+        const myScores = scores.filter(s => s.player === playerName);
+        if (myScores.length === 0) {
+          ps.style.display = 'none';
+          return;
+        }
+        const wins = myScores.filter(s => s.result === 'win');
+        const best = wins.length ? Math.min(...wins.map(s => s.time)) : null;
+        const avg = wins.length ? Math.round(wins.reduce((a,b) => a+b.time, 0) / wins.length) : null;
+        
+        renderPlayerStats(myScores.length, wins.length, best, avg);
+        return;
+      }
+      
       const res = await fetch(`${API_BASE}/api/scores/player/${encodeURIComponent(playerName)}`);
       const data = await res.json();
       const s = data.stats;
       if (s && s.totalGames > 0) {
-        ps.style.display = 'block';
-        $('lb-player-name').textContent = `📊 ${playerName}`;
-        $('ps-total').textContent = s.totalGames; $('ps-wins').textContent = s.wins;
-        $('ps-best').textContent = s.bestTime != null ? s.bestTime+'s' : '—';
-        $('ps-avg').textContent = s.avgTime != null ? Math.round(s.avgTime)+'s' : '—';
+        renderPlayerStats(s.totalGames, s.wins, s.bestTime, s.avgTime ? Math.round(s.avgTime) : null);
       } else ps.style.display = 'none';
-    } catch { ps.style.display = 'none'; }
+    } catch { 
+      ps.style.display = 'none'; 
+    }
+  }
+  
+  function renderPlayerStats(total, wins, best, avg) {
+    const ps = $('lb-player-stats');
+    ps.style.display = 'block';
+    $('lb-player-name').textContent = `📊 ${playerName}`;
+    $('ps-total').textContent = total; 
+    $('ps-wins').textContent = wins;
+    $('ps-best').textContent = best != null ? best+'s' : '—';
+    $('ps-avg').textContent = avg != null ? avg+'s' : '—';
   }
 
-  function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+  function esc(s) { 
+    const d = document.createElement('div'); 
+    d.textContent = s; 
+    return d.innerHTML; 
+  }
 
   // LEADERBOARD UI
   function openLB() {
-    $lbPanel.classList.add('open'); $cfgPanel.classList.remove('open');
-    loadLeaderboard(currentPreset || 'medium'); loadPlayerStats();
-    document.querySelectorAll('.lb-filter-btn').forEach(b => b.classList.toggle('active', b.dataset.preset === (currentPreset || 'medium')));
+    $lbPanel.classList.add('open'); 
+    $cfgPanel.classList.remove('open');
+    loadLeaderboard(currentPreset || 'medium'); 
+    loadPlayerStats();
+    document.querySelectorAll('.lb-filter-btn').forEach(b => 
+      b.classList.toggle('active', b.dataset.preset === (currentPreset || 'medium'))
+    );
   }
-  $('btn-leaderboard').addEventListener('click', () => { $lbPanel.classList.contains('open') ? $lbPanel.classList.remove('open') : openLB(); });
+  
+  $('btn-leaderboard').addEventListener('click', () => { 
+    $lbPanel.classList.contains('open') ? $lbPanel.classList.remove('open') : openLB(); 
+  });
+  
   $('lb-close').addEventListener('click', () => $lbPanel.classList.remove('open'));
-  $('btn-ranking-loss').addEventListener('click', () => { $explosionScr.classList.remove('active'); openLB(); });
-  $('btn-ranking-win').addEventListener('click', () => { $victoryScr.classList.remove('active'); openLB(); });
+  $('btn-ranking-loss').addEventListener('click', () => { 
+    $explosionScr.classList.remove('active'); 
+    openLB(); 
+  });
+  $('btn-ranking-win').addEventListener('click', () => { 
+    $victoryScr.classList.remove('active'); 
+    openLB(); 
+  });
+  
   document.querySelectorAll('.lb-filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.lb-filter-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active'); loadLeaderboard(btn.dataset.preset);
+      btn.classList.add('active'); 
+      loadLeaderboard(btn.dataset.preset);
     });
   });
 
   // NEW GAME
   function newGame() {
-    stopTimer(); gameState = 'idle'; firstClick = true;
-    revealedCount = 0; flagCount = 0; seconds = 0;
+    stopTimer(); 
+    gameState = 'idle'; 
+    firstClick = true;
+    revealedCount = 0; 
+    flagCount = 0; 
+    seconds = 0;
     totalSafe = CONFIG.rows * CONFIG.cols - CONFIG.mines;
+    
     document.body.classList.remove('game-won', 'game-lost');
     $explosionScr.classList.remove('active');
     $victoryScr.classList.remove('active');
     $timer.textContent = '000';
-    const mx = Math.floor(CONFIG.rows * CONFIG.cols * 0.6);
-    if (CONFIG.mines > mx) CONFIG.mines = mx;
-    createBoard(); renderGrid(); updateHUD(); syncCfg();
+    
+    // Limitar minas en móviles
+    const maxMines = Math.floor(CONFIG.rows * CONFIG.cols * MAX_MINES_RATIO);
+    if (CONFIG.mines > maxMines) CONFIG.mines = maxMines;
+    
+    createBoard(); 
+    renderGrid(); 
+    updateHUD(); 
+    syncCfg();
   }
 
   // CONFIG
   function syncCfg() {
-    $cfgRows.value = CONFIG.rows; $cfgRowsV.textContent = CONFIG.rows;
-    $cfgCols.value = CONFIG.cols; $cfgColsV.textContent = CONFIG.cols;
-    $cfgMines.value = CONFIG.mines; $cfgMinesV.textContent = CONFIG.mines;
-    $cfgMines.max = Math.floor(CONFIG.rows * CONFIG.cols * 0.6);
+    // Limitar rangos en móviles
+    $cfgRows.max = MAX_ROWS;
+    $cfgCols.max = MAX_COLS;
+    
+    $cfgRows.value = Math.min(CONFIG.rows, MAX_ROWS); 
+    $cfgRowsV.textContent = $cfgRows.value;
+    $cfgCols.value = Math.min(CONFIG.cols, MAX_COLS); 
+    $cfgColsV.textContent = $cfgCols.value;
+    $cfgMines.value = CONFIG.mines; 
+    $cfgMinesV.textContent = CONFIG.mines;
+    $cfgMines.max = Math.floor($cfgRows.value * $cfgCols.value * MAX_MINES_RATIO);
   }
-  $cfgRows.addEventListener('input', () => $cfgRowsV.textContent = $cfgRows.value);
-  $cfgCols.addEventListener('input', () => $cfgColsV.textContent = $cfgCols.value);
-  $cfgMines.addEventListener('input', () => $cfgMinesV.textContent = $cfgMines.value);
-  $('btn-apply').addEventListener('click', () => {
-    CONFIG.rows = +$cfgRows.value; CONFIG.cols = +$cfgCols.value; CONFIG.mines = +$cfgMines.value;
-    currentPreset = 'custom'; $presetSel.value = ''; $cfgPanel.classList.remove('open'); newGame();
+  
+  $cfgRows.addEventListener('input', () => {
+    $cfgRowsV.textContent = $cfgRows.value;
+    $cfgMines.max = Math.floor($cfgRows.value * $cfgCols.value * MAX_MINES_RATIO);
   });
-  $('btn-config').addEventListener('click', () => { $cfgPanel.classList.toggle('open'); $lbPanel.classList.remove('open'); });
+  
+  $cfgCols.addEventListener('input', () => {
+    $cfgColsV.textContent = $cfgCols.value;
+    $cfgMines.max = Math.floor($cfgRows.value * $cfgCols.value * MAX_MINES_RATIO);
+  });
+  
+  $cfgMines.addEventListener('input', () => $cfgMinesV.textContent = $cfgMines.value);
+  
+  $('btn-apply').addEventListener('click', () => {
+    CONFIG.rows = +$cfgRows.value; 
+    CONFIG.cols = +$cfgCols.value; 
+    CONFIG.mines = +$cfgMines.value;
+    currentPreset = 'custom'; 
+    $presetSel.value = ''; 
+    $cfgPanel.classList.remove('open'); 
+    newGame();
+  });
+  
+  $('btn-config').addEventListener('click', () => { 
+    $cfgPanel.classList.toggle('open'); 
+    $lbPanel.classList.remove('open'); 
+  });
+  
   $presetSel.addEventListener('change', () => {
     const k = $presetSel.value;
-    if (PRESETS[k]) { CONFIG = { ...PRESETS[k] }; currentPreset = k; $cfgPanel.classList.remove('open'); newGame(); }
+    if (PRESETS[k]) { 
+      CONFIG = { ...PRESETS[k] }; 
+      currentPreset = k; 
+      $cfgPanel.classList.remove('open'); 
+      newGame(); 
+    }
   });
+  
   $('btn-new').addEventListener('click', newGame);
   $('btn-retry-loss').addEventListener('click', newGame);
   $('btn-retry-win').addEventListener('click', newGame);
-
-  // RESIZE
-  addEventListener('resize', () => {
-    document.documentElement.style.setProperty('--cell-size', computeCellSize()+'px');
-    map.invalidateSize(); map.fitBounds(HORMUZ_BOUNDS, { padding: [10, 10] });
-  });
 
   // INIT
   const saved = sessionStorage.getItem('searchins_player');
