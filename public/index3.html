@@ -1,9 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>⚓ SEARCHINS — Strait of Hormuz</title>
+<title>⚓ SEARCHINS — Estrecho de Ormuz</title>
+
+<!-- Leaflet CSS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
 <style>
@@ -11,27 +13,20 @@
 
   :root {
     --cell-size: 0px;
-    --hud-bg: rgba(245, 243, 237, 0.92);
-    --hud-border: rgba(60, 80, 90, 0.18);
-    --accent: #0e7c5f;
-    --accent-light: #12a87e;
-    --accent-bg: rgba(14, 124, 95, 0.07);
-    --danger: #c0392b;
-    --danger-light: #e74c3c;
-    --danger-bg: rgba(192, 57, 43, 0.06);
-    --gold: #c78c06;
-    --gold-light: #f0b429;
-    --gold-bg: rgba(199, 140, 6, 0.07);
-    --grid-line: rgba(60, 80, 90, 0.12);
-    --cell-hidden: rgba(255, 255, 255, 0.65);
-    --cell-hover: rgba(14, 124, 95, 0.1);
-    --cell-revealed: rgba(240, 238, 232, 0.82);
-    --cell-mine-hit: rgba(231, 76, 60, 0.25);
-    --text-primary: #2c3e40;
-    --text-dim: #8a9a9e;
-    --text-dark: #1a2426;
-    --surface: #f5f3ed;
-    --surface-warm: #faf8f2;
+    --hud-bg: rgba(10, 12, 18, 0.88);
+    --hud-border: rgba(0, 255, 170, 0.25);
+    --accent: #00ffaa;
+    --accent-dim: #00aa77;
+    --danger: #ff3366;
+    --warning: #ffaa00;
+    --gold: #ffd700;
+    --grid-line: rgba(0, 255, 170, 0.12);
+    --cell-hidden: rgba(8, 14, 24, 0.72);
+    --cell-hover: rgba(0, 255, 170, 0.18);
+    --cell-revealed: rgba(4, 8, 16, 0.82);
+    --cell-mine-hit: rgba(255, 30, 60, 0.55);
+    --text-primary: #e0f0ea;
+    --text-dim: #5a7a6a;
     --font-display: 'Orbitron', monospace;
     --font-mono: 'Share Tech Mono', monospace;
     --font-handwritten: 'Permanent Marker', cursive;
@@ -42,7 +37,7 @@
   html, body {
     width: 100%; height: 100%;
     overflow: hidden;
-    background: var(--surface);
+    background: #060a10;
     font-family: var(--font-mono);
     color: var(--text-primary);
     user-select: none;
@@ -52,17 +47,16 @@
   /* ── MAP ── */
   #map {
     position: fixed; inset: 0; z-index: 0;
-    filter: saturate(0.6) brightness(1.08) contrast(0.95);
+    filter: saturate(0.35) brightness(0.55) contrast(1.1);
     transition: filter 0.8s ease;
   }
-  body.game-won #map  { filter: saturate(0.9) brightness(1.1) contrast(1.0); }
-  body.game-lost #map { filter: saturate(0.2) brightness(0.75) contrast(1.1) sepia(0.3); }
+  body.game-won #map  { filter: saturate(0.9) brightness(0.75) contrast(1.05) hue-rotate(10deg); }
+  body.game-lost #map { filter: saturate(0.1) brightness(0.2) contrast(1.3) sepia(0.5); }
 
-  /* ── SUBTLE GRAIN ── */
+  /* ── SCANLINES ── */
   #scanlines {
     position: fixed; inset: 0; z-index: 1; pointer-events: none;
-    opacity: 0.3;
-    background: repeating-linear-gradient(0deg, transparent 0px, transparent 3px, rgba(0,0,0,0.015) 3px, rgba(0,0,0,0.015) 6px);
+    background: repeating-linear-gradient(0deg, transparent 0px, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px);
   }
 
   /* ══════════════════════════════════════════
@@ -73,12 +67,10 @@
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
     pointer-events: all;
-    background: rgba(250, 248, 242, 0.5);
-    backdrop-filter: blur(2px);
     transition: opacity 0.6s ease, transform 0.6s ease;
   }
   #unlock-screen.hidden {
-    opacity: 0; transform: scale(1.05);
+    opacity: 0; transform: scale(1.1);
     pointer-events: none;
   }
 
@@ -89,13 +81,16 @@
     color: var(--text-dim); margin-bottom: 16px;
     animation: label-pulse 2s ease-in-out infinite;
   }
-  @keyframes label-pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+  @keyframes label-pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
 
   .unlock-subtitle {
     font-family: var(--font-mono);
     font-size: 12px; color: var(--text-dim);
     margin-bottom: 30px; text-align: center;
-    max-width: 360px; line-height: 1.7;
+    max-width: 340px; line-height: 1.6;
   }
 
   .unlock-btn {
@@ -103,47 +98,70 @@
     width: 140px; height: 140px;
     border-radius: 50%;
     border: 3px solid var(--danger);
-    background: radial-gradient(circle at 35% 35%, #fff5f3, #f9e8e5 70%);
+    background: radial-gradient(circle at 35% 35%, #2a0a0f, #0a0205 70%);
     cursor: pointer;
     display: flex; flex-direction: column;
-    align-items: center; justify-content: center; gap: 4px;
+    align-items: center; justify-content: center;
+    gap: 4px;
     transition: all 0.3s ease;
     animation: mine-float 3s ease-in-out infinite;
-    box-shadow: 0 4px 30px rgba(192,57,43,0.12), 0 0 60px rgba(192,57,43,0.06);
+    box-shadow:
+      0 0 40px rgba(255,51,102,0.2),
+      0 0 80px rgba(255,51,102,0.08),
+      inset 0 0 30px rgba(255,51,102,0.1);
   }
   .unlock-btn:hover {
-    transform: scale(1.08); border-color: var(--danger-light);
-    box-shadow: 0 4px 40px rgba(192,57,43,0.2), 0 0 80px rgba(192,57,43,0.1);
+    transform: scale(1.08);
+    border-color: #ff5577;
+    box-shadow:
+      0 0 60px rgba(255,51,102,0.4),
+      0 0 120px rgba(255,51,102,0.15),
+      inset 0 0 40px rgba(255,51,102,0.2);
     animation: none;
   }
   .unlock-btn:active { transform: scale(0.95); }
-  @keyframes mine-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+
+  @keyframes mine-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
 
   .unlock-btn::before {
-    content: ''; position: absolute; inset: -18px;
-    border-radius: 50%; border: 2px dashed rgba(192,57,43,0.2);
+    content: '';
+    position: absolute; inset: -18px;
+    border-radius: 50%;
+    border: 2px dashed rgba(255,51,102,0.25);
     animation: spike-rotate 12s linear infinite;
   }
   @keyframes spike-rotate { to { transform: rotate(360deg); } }
 
-  .mine-icon { font-size: 40px; filter: drop-shadow(0 2px 8px rgba(192,57,43,0.3)); }
+  .mine-icon { font-size: 40px; filter: drop-shadow(0 0 10px rgba(255,51,102,0.5)); }
   .mine-text {
-    font-family: var(--font-display); font-size: 9px; font-weight: 900;
-    letter-spacing: 2px; text-transform: uppercase; color: var(--danger);
+    font-family: var(--font-display);
+    font-size: 9px; font-weight: 900;
+    letter-spacing: 2px; text-transform: uppercase;
+    color: var(--danger);
+    text-shadow: 0 0 10px rgba(255,51,102,0.5);
   }
 
   .sonar-ring {
-    position: absolute; border: 1px solid rgba(192,57,43,0.2);
-    border-radius: 50%; width: 140px; height: 140px;
+    position: absolute;
+    border: 1px solid rgba(255,51,102,0.3);
+    border-radius: 50%;
+    width: 140px; height: 140px;
     animation: sonar 3s ease-out infinite;
   }
   .sonar-ring:nth-child(2) { animation-delay: 1s; }
   .sonar-ring:nth-child(3) { animation-delay: 2s; }
-  @keyframes sonar { 0% { transform: scale(1); opacity: 0.5; } 100% { transform: scale(3); opacity: 0; } }
+
+  @keyframes sonar {
+    0% { transform: scale(1); opacity: 0.6; }
+    100% { transform: scale(3); opacity: 0; }
+  }
 
   .unlock-coords {
     font-family: var(--font-mono);
-    font-size: 10px; color: rgba(192,57,43,0.35);
+    font-size: 10px; color: rgba(255,51,102,0.4);
     margin-top: 20px; letter-spacing: 2px;
   }
 
@@ -154,15 +172,16 @@
     padding: 10px 20px;
     background: var(--hud-bg);
     border-bottom: 1px solid var(--hud-border);
-    backdrop-filter: blur(14px);
-    transform: translateY(-100%); transition: transform 0.5s ease;
+    backdrop-filter: blur(12px);
+    transform: translateY(-100%);
+    transition: transform 0.5s ease;
   }
   #hud.visible { transform: translateY(0); }
 
   #hud .brand {
     font-family: var(--font-display); font-weight: 900;
     font-size: 15px; letter-spacing: 3px; text-transform: uppercase;
-    color: var(--accent);
+    color: var(--accent); text-shadow: 0 0 20px rgba(0,255,170,0.4);
   }
   #hud .brand span { color: var(--text-dim); font-weight: 400; font-size: 11px; letter-spacing: 1px; }
 
@@ -178,10 +197,10 @@
   .player-tag {
     font-family: var(--font-display); font-size: 11px; font-weight: 700;
     color: var(--gold); letter-spacing: 1px; cursor: pointer;
-    padding: 4px 10px; border: 1px solid rgba(199,140,6,0.25);
-    background: var(--gold-bg); transition: all 0.2s; border-radius: 4px;
+    padding: 4px 10px; border: 1px solid rgba(255,215,0,0.25);
+    background: rgba(255,215,0,0.06); transition: all 0.2s;
   }
-  .player-tag:hover { background: rgba(199,140,6,0.12); border-color: var(--gold); }
+  .player-tag:hover { background: rgba(255,215,0,0.12); border-color: var(--gold); }
 
   .hud-actions { display: flex; gap: 10px; align-items: center; }
 
@@ -189,22 +208,22 @@
     font-family: var(--font-display); font-size: 11px; font-weight: 700;
     letter-spacing: 1.5px; text-transform: uppercase;
     padding: 8px 16px; border: 1px solid var(--hud-border);
-    background: var(--accent-bg); color: var(--accent);
-    cursor: pointer; transition: all 0.2s ease; border-radius: 4px;
+    background: rgba(0,255,170,0.06); color: var(--accent);
+    cursor: pointer; transition: all 0.2s ease;
   }
   .btn:hover {
-    background: rgba(14,124,95,0.14); border-color: var(--accent);
-    box-shadow: 0 2px 12px rgba(14,124,95,0.1);
+    background: rgba(0,255,170,0.15); border-color: var(--accent);
+    box-shadow: 0 0 15px rgba(0,255,170,0.15);
   }
-  .btn.btn-gold { color: var(--gold); border-color: rgba(199,140,6,0.25); background: var(--gold-bg); }
-  .btn.btn-gold:hover { background: rgba(199,140,6,0.14); border-color: var(--gold); }
+  .btn.btn-gold { color: var(--gold); border-color: rgba(255,215,0,0.3); background: rgba(255,215,0,0.06); }
+  .btn.btn-gold:hover { background: rgba(255,215,0,0.15); border-color: var(--gold); }
 
   select.btn {
     appearance: none; padding-right: 28px;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%230e7c5f'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2300ffaa'/%3E%3C/svg%3E");
     background-repeat: no-repeat; background-position: right 10px center;
   }
-  select.btn option { background: var(--surface); color: var(--text-primary); }
+  select.btn option { background: #0a0e14; color: var(--text-primary); }
 
   /* ── GRID ── */
   #grid-wrapper {
@@ -218,9 +237,8 @@
   #grid {
     display: grid; pointer-events: all;
     border: 1px solid var(--hud-border);
-    box-shadow: 0 4px 40px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+    box-shadow: 0 0 60px rgba(0,255,170,0.07), inset 0 0 40px rgba(0,0,0,0.3);
     position: relative; background: transparent;
-    border-radius: 4px; overflow: hidden;
   }
 
   .cell {
@@ -232,23 +250,23 @@
     transition: background 0.15s ease, transform 0.1s ease;
     border: 1px solid var(--grid-line);
     background: var(--cell-hidden);
-    backdrop-filter: blur(3px);
+    backdrop-filter: blur(4px);
   }
   .cell:not(.revealed):not(.game-over-cell):hover {
     background: var(--cell-hover); z-index: 2;
-    transform: scale(1.04); border-color: rgba(14,124,95,0.3);
+    transform: scale(1.04); border-color: rgba(0,255,170,0.35);
   }
-  .cell.revealed { background: var(--cell-revealed); cursor: default; border-color: rgba(60,80,90,0.06); }
+  .cell.revealed { background: var(--cell-revealed); cursor: default; border-color: rgba(0,255,170,0.06); }
   .cell.revealed.empty { color: transparent; }
 
-  .cell.n1 { color: #2980b9; } .cell.n2 { color: #27ae60; }
-  .cell.n3 { color: #d35400; } .cell.n4 { color: #8e44ad; }
-  .cell.n5 { color: #c0392b; } .cell.n6 { color: #16a085; }
-  .cell.n7 { color: #e84393; } .cell.n8 { color: #636e72; }
+  .cell.n1 { color: #00ccff; } .cell.n2 { color: #00ff88; }
+  .cell.n3 { color: #ffaa00; } .cell.n4 { color: #aa66ff; }
+  .cell.n5 { color: #ff4444; } .cell.n6 { color: #00ddcc; }
+  .cell.n7 { color: #ff77aa; } .cell.n8 { color: #cccccc; }
 
   .cell.flagged::after {
     content: '⚑'; font-size: calc(var(--cell-size) * 0.55);
-    color: var(--danger); filter: drop-shadow(0 1px 4px rgba(192,57,43,0.3));
+    color: var(--danger); filter: drop-shadow(0 0 6px rgba(255,51,102,0.6));
     animation: flag-plant 0.25s ease-out;
   }
   @keyframes flag-plant {
@@ -261,7 +279,7 @@
   .cell.mine-show::after { content: '💣'; font-size: calc(var(--cell-size) * 0.5); }
   @keyframes mine-explode {
     0% { transform: scale(1); }
-    30% { transform: scale(1.3); background: rgba(231,76,60,0.3); }
+    30% { transform: scale(1.3); background: rgba(255,80,60,0.7); }
     100% { transform: scale(1); }
   }
 
@@ -271,15 +289,10 @@
   #explosion-screen, #victory-screen {
     position: fixed; inset: 0; z-index: 600;
     display: none; align-items: center; justify-content: center;
-    flex-direction: column; backdrop-filter: blur(12px);
+    flex-direction: column; backdrop-filter: blur(10px);
   }
-  #explosion-screen {
-    background: radial-gradient(circle at center, rgba(231,76,60,0.08) 0%, rgba(250,248,242,0.95) 70%);
-  }
-  #victory-screen {
-    background: radial-gradient(circle at center, rgba(14,124,95,0.06) 0%, rgba(250,248,242,0.95) 70%);
-    overflow: hidden;
-  }
+  #explosion-screen { background: radial-gradient(circle at center, rgba(180,30,20,0.35) 0%, rgba(0,0,0,0.92) 70%); }
+  #victory-screen  { background: radial-gradient(circle at center, rgba(20,80,40,0.35) 0%, rgba(0,0,0,0.92) 70%); overflow: hidden; }
   #explosion-screen.active, #victory-screen.active { display: flex; }
 
   .explosion-emoji, .victory-emoji {
@@ -294,10 +307,10 @@
 
   .explosion-text {
     font-family: var(--font-handwritten);
-    font-size: clamp(50px, 14vw, 150px);
-    color: var(--danger);
-    text-shadow: 0 3px 0 #922b21, 0 0 40px rgba(192,57,43,0.2);
-    letter-spacing: 4px;
+    font-size: clamp(50px, 14vw, 160px);
+    color: #ff2222;
+    text-shadow: 0 0 40px rgba(255,30,30,0.8), 0 0 80px rgba(255,30,30,0.5), 0 0 160px rgba(255,30,30,0.3), 0 4px 0 #aa0000;
+    letter-spacing: 6px;
     animation: explosion-in 0.6s cubic-bezier(0.17, 0.89, 0.32, 1.28) both;
     text-align: center; line-height: 1;
   }
@@ -310,7 +323,7 @@
   .explosion-sub {
     font-family: var(--font-mono);
     font-size: clamp(12px, 2.5vw, 18px);
-    color: rgba(192,57,43,0.55);
+    color: rgba(255,100,80,0.7);
     margin-top: 16px; letter-spacing: 3px;
     animation: fade-up 0.5s ease 0.4s both;
   }
@@ -319,7 +332,7 @@
     font-family: var(--font-handwritten);
     font-size: clamp(30px, 8vw, 80px);
     color: var(--gold);
-    text-shadow: 0 3px 0 #a67c05, 0 0 30px rgba(199,140,6,0.2);
+    text-shadow: 0 0 30px rgba(255,215,0,0.6), 0 0 60px rgba(255,215,0,0.3), 0 3px 0 #b8860b;
     text-align: center; line-height: 1.1;
     animation: explosion-in 0.6s cubic-bezier(0.17, 0.89, 0.32, 1.28) 0.2s both;
     max-width: 90vw;
@@ -328,35 +341,36 @@
   .victory-message {
     font-family: var(--font-mono);
     font-size: clamp(13px, 2.5vw, 20px);
-    color: rgba(44,62,64,0.7);
-    text-align: center; max-width: 600px; line-height: 1.7;
+    color: rgba(255,215,0,0.75);
+    text-align: center; max-width: 600px; line-height: 1.6;
     padding: 0 20px;
     animation: fade-up 0.5s ease 0.5s both;
   }
 
+  /* ── Slot para tu imagen personalizada ── */
   .victory-image-slot {
     width: clamp(120px, 25vw, 220px);
     height: clamp(120px, 25vw, 220px);
-    border: 2px dashed rgba(199,140,6,0.25);
+    border: 2px dashed rgba(255,215,0,0.3);
     border-radius: 12px;
     display: flex; align-items: center; justify-content: center;
     flex-direction: column; gap: 6px;
     animation: fade-up 0.5s ease 0.4s both;
-    overflow: hidden; background: rgba(199,140,6,0.03);
+    overflow: hidden; background: rgba(255,215,0,0.03);
     margin: 10px 0;
   }
-  .victory-image-slot.has-image { border: 2px solid rgba(199,140,6,0.2); }
+  .victory-image-slot.has-image { border: 2px solid rgba(255,215,0,0.25); }
   .victory-image-slot img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; }
   .victory-image-placeholder { font-size: 40px; opacity: 0.4; }
   .victory-image-hint { font-size: 9px; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; }
 
   .result-stats {
     margin-top: 14px; padding: 14px 28px;
-    border: 1px solid var(--hud-border);
-    background: rgba(255,255,255,0.5);
-    font-size: 13px; color: var(--text-dim);
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03);
+    font-size: 13px; color: rgba(200,200,180,0.7);
     animation: fade-up 0.5s ease 0.7s both;
-    text-align: center; line-height: 1.8; border-radius: 6px;
+    text-align: center; line-height: 1.8;
   }
   .result-stats strong { color: var(--accent); }
 
@@ -369,13 +383,14 @@
     to { transform: translateY(0); opacity: 1; }
   }
 
+  /* Particles */
   .fire-particle {
     position: absolute; width: 6px; height: 6px; border-radius: 50%;
-    background: radial-gradient(circle, #e67e22, #c0392b);
+    background: radial-gradient(circle, #ff4400, #ff0000);
     animation: fire-rise linear forwards; pointer-events: none;
   }
   @keyframes fire-rise {
-    0% { opacity: 0.8; transform: translateY(0) scale(1); }
+    0% { opacity: 1; transform: translateY(0) scale(1); }
     100% { opacity: 0; transform: translateY(-200px) scale(0); }
   }
 
@@ -392,15 +407,14 @@
   .modal-backdrop {
     position: fixed; inset: 0; z-index: 300;
     display: none; align-items: center; justify-content: center;
-    background: rgba(250,248,242,0.8); backdrop-filter: blur(8px);
+    background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);
   }
   .modal-backdrop.active { display: flex; }
 
   .modal-box {
     text-align: center; padding: 36px 44px;
     border: 1px solid var(--hud-border);
-    background: white; border-radius: 8px;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.08);
+    background: var(--hud-bg); backdrop-filter: blur(20px);
     min-width: 320px; max-width: 90vw;
     animation: box-pop 0.35s ease both;
   }
@@ -418,10 +432,10 @@
   .modal-box input[type="text"] {
     width: 100%; padding: 10px 14px;
     font-family: var(--font-mono); font-size: 16px;
-    background: var(--surface); color: var(--text-primary);
+    background: rgba(0,255,170,0.05); color: var(--text-primary);
     border: 1px solid var(--hud-border); outline: none;
     text-align: center; letter-spacing: 1px; margin-bottom: 16px;
-    border-radius: 4px; transition: border-color 0.2s;
+    transition: border-color 0.2s;
   }
   .modal-box input[type="text"]:focus { border-color: var(--accent); }
   .modal-box input[type="text"]::placeholder { color: var(--text-dim); }
@@ -430,7 +444,7 @@
   #leaderboard-panel {
     position: fixed; top: 52px; left: 0; bottom: 0;
     z-index: 150; width: 360px;
-    background: rgba(255,255,255,0.95);
+    background: var(--hud-bg);
     border-right: 1px solid var(--hud-border);
     backdrop-filter: blur(14px);
     transform: translateX(-100%); transition: transform 0.3s ease;
@@ -446,34 +460,34 @@
   .lb-close:hover { color: var(--accent); }
   .lb-filters {
     padding: 12px 20px; display: flex; gap: 6px; flex-wrap: wrap;
-    border-bottom: 1px solid rgba(0,0,0,0.04);
+    border-bottom: 1px solid rgba(0,255,170,0.08);
   }
   .lb-filter-btn {
     font-family: var(--font-display); font-size: 9px; font-weight: 700;
     letter-spacing: 1px; text-transform: uppercase;
-    padding: 5px 10px; cursor: pointer; border-radius: 4px;
-    border: 1px solid rgba(14,124,95,0.15);
+    padding: 5px 10px; cursor: pointer;
+    border: 1px solid rgba(0,255,170,0.15);
     background: transparent; color: var(--text-dim); transition: all 0.2s;
   }
   .lb-filter-btn:hover { color: var(--accent); border-color: var(--accent); }
-  .lb-filter-btn.active { color: var(--accent); border-color: var(--accent); background: var(--accent-bg); }
-  .lb-list { flex: 1; overflow-y: auto; padding: 8px 0; scrollbar-width: thin; }
+  .lb-filter-btn.active { color: var(--accent); border-color: var(--accent); background: rgba(0,255,170,0.1); }
+  .lb-list { flex: 1; overflow-y: auto; padding: 8px 0; scrollbar-width: thin; scrollbar-color: var(--accent-dim) transparent; }
   .lb-row {
     display: grid; grid-template-columns: 36px 1fr 70px 60px;
     align-items: center; padding: 10px 20px; gap: 8px;
-    border-bottom: 1px solid rgba(0,0,0,0.03); transition: background 0.15s;
+    border-bottom: 1px solid rgba(0,255,170,0.04); transition: background 0.15s;
   }
-  .lb-row:hover { background: rgba(14,124,95,0.03); }
+  .lb-row:hover { background: rgba(0,255,170,0.04); }
   .lb-rank { font-family: var(--font-display); font-size: 14px; font-weight: 900; color: var(--text-dim); text-align: center; }
   .lb-row:nth-child(1) .lb-rank { color: var(--gold); }
-  .lb-row:nth-child(2) .lb-rank { color: #95a5a6; }
-  .lb-row:nth-child(3) .lb-rank { color: #b87333; }
+  .lb-row:nth-child(2) .lb-rank { color: #c0c0c0; }
+  .lb-row:nth-child(3) .lb-rank { color: #cd7f32; }
   .lb-name { font-size: 13px; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .lb-time { font-family: var(--font-display); font-size: 14px; font-weight: 700; color: var(--accent); text-align: right; }
   .lb-config { font-size: 10px; color: var(--text-dim); text-align: right; }
   .lb-empty, .lb-loading { padding: 40px 20px; text-align: center; color: var(--text-dim); font-size: 13px; }
   .lb-player-stats {
-    padding: 14px 20px; border-bottom: 1px solid var(--hud-border); background: var(--gold-bg);
+    padding: 14px 20px; border-bottom: 1px solid var(--hud-border); background: rgba(255,215,0,0.03);
   }
   .lb-player-stats h4 { font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); margin-bottom: 8px; }
   .lb-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
@@ -485,7 +499,7 @@
   #config-panel {
     position: fixed; top: 52px; right: 0; z-index: 150;
     width: 260px; padding: 20px;
-    background: rgba(255,255,255,0.95);
+    background: var(--hud-bg);
     border-left: 1px solid var(--hud-border);
     border-bottom: 1px solid var(--hud-border);
     backdrop-filter: blur(14px);
@@ -513,134 +527,135 @@
 </head>
 <body>
 
+<!-- MAP -->
 <div id="map"></div>
 <div id="scanlines"></div>
 
-<!-- UNLOCK -->
+<!-- UNLOCK SCREEN -->
 <div id="unlock-screen">
-  <div class="unlock-label">Strait of Hormuz · Restricted Zone</div>
+  <div class="unlock-label">Estrecho de Ormuz · Zona Restringida</div>
   <div class="unlock-subtitle">
-    A naval minefield has been detected in the strait.<br>
-    Authorization required to begin demining operations.
+    Se ha detectado un campo de minas naval en el estrecho.
+    Se requiere autorización para iniciar el desminado.
   </div>
   <div class="unlock-btn" id="unlock-btn">
     <div class="sonar-ring"></div>
     <div class="sonar-ring"></div>
     <div class="sonar-ring"></div>
     <div class="mine-icon">💣</div>
-    <div class="mine-text">Unlock</div>
+    <div class="mine-text">Desbloquear</div>
   </div>
   <div class="unlock-coords">26°34'N 56°15'E</div>
 </div>
 
-<!-- NAME -->
+<!-- NAME MODAL -->
 <div class="modal-backdrop" id="name-modal">
   <div class="modal-box">
-    <h2>⚓ IDENTIFICATION</h2>
-    <p>Enter your callsign to access the operations zone</p>
-    <input type="text" id="name-input" placeholder="Your name..." maxlength="30" autocomplete="off" spellcheck="false">
+    <h2>⚓ IDENTIFICACIÓN</h2>
+    <p>Ingresa tu indicativo de operaciones, marinero</p>
+    <input type="text" id="name-input" placeholder="Tu nombre..." maxlength="30" autocomplete="off" spellcheck="false">
     <br>
-    <button class="btn" id="btn-name-ok">▶ ENTER ZONE</button>
+    <button class="btn" id="btn-name-ok">▶ ENTRAR A ZONA</button>
   </div>
 </div>
 
 <!-- HUD -->
 <div id="hud">
   <div style="display:flex;align-items:center;gap:14px;">
-    <div class="brand">SEARCHINS<br><span>Strait of Hormuz · Operations Zone</span></div>
-    <div class="player-tag" id="player-tag" title="Change name">—</div>
+    <div class="brand">SEARCHINS<br><span>Estrecho de Ormuz · Zona de Operaciones</span></div>
+    <div class="player-tag" id="player-tag" title="Cambiar nombre">—</div>
   </div>
   <div class="hud-stats">
-    <div class="stat"><span class="stat-label">Mines</span><span class="stat-value mines-count" id="mines-left">40</span></div>
-    <div class="stat"><span class="stat-label">Time</span><span class="stat-value" id="timer">000</span></div>
-    <div class="stat"><span class="stat-label">Cells</span><span class="stat-value" id="cells-left">216</span></div>
+    <div class="stat"><span class="stat-label">Minas</span><span class="stat-value mines-count" id="mines-left">40</span></div>
+    <div class="stat"><span class="stat-label">Tiempo</span><span class="stat-value" id="timer">000</span></div>
+    <div class="stat"><span class="stat-label">Celdas</span><span class="stat-value" id="cells-left">216</span></div>
   </div>
   <div class="hud-actions">
-    <button class="btn btn-gold" id="btn-leaderboard" title="Leaderboard">🏆</button>
+    <button class="btn btn-gold" id="btn-leaderboard" title="Ranking">🏆</button>
     <select class="btn" id="preset-select" title="Preset">
-      <option value="easy">Easy 10×10</option>
-      <option value="medium" selected>Medium 16×16</option>
-      <option value="hard">Hard 20×20</option>
-      <option value="extreme">Extreme 25×25</option>
+      <option value="easy">Fácil 10×10</option>
+      <option value="medium" selected>Medio 16×16</option>
+      <option value="hard">Difícil 20×20</option>
+      <option value="extreme">Extremo 25×25</option>
     </select>
-    <button class="btn" id="btn-config" title="Settings">⚙</button>
-    <button class="btn" id="btn-new" title="New game">↻</button>
+    <button class="btn" id="btn-config" title="Configurar">⚙</button>
+    <button class="btn" id="btn-new" title="Nueva partida">↻</button>
   </div>
 </div>
 
 <!-- CONFIG -->
 <div id="config-panel">
-  <div class="cfg-title">⚙ Settings</div>
-  <div class="cfg-group"><label>Rows: <span class="cfg-val" id="cfg-rows-val">16</span></label><input type="range" id="cfg-rows" min="5" max="30" value="16"></div>
-  <div class="cfg-group"><label>Columns: <span class="cfg-val" id="cfg-cols-val">16</span></label><input type="range" id="cfg-cols" min="5" max="40" value="16"></div>
-  <div class="cfg-group"><label>Mines: <span class="cfg-val" id="cfg-mines-val">40</span></label><input type="range" id="cfg-mines" min="1" max="200" value="40"></div>
-  <button class="btn" id="btn-apply" style="width:100%;margin-top:10px;">▶ APPLY</button>
+  <div class="cfg-title">⚙ Configuración</div>
+  <div class="cfg-group"><label>Filas: <span class="cfg-val" id="cfg-rows-val">16</span></label><input type="range" id="cfg-rows" min="5" max="30" value="16"></div>
+  <div class="cfg-group"><label>Columnas: <span class="cfg-val" id="cfg-cols-val">16</span></label><input type="range" id="cfg-cols" min="5" max="40" value="16"></div>
+  <div class="cfg-group"><label>Minas: <span class="cfg-val" id="cfg-mines-val">40</span></label><input type="range" id="cfg-mines" min="1" max="200" value="40"></div>
+  <button class="btn" id="btn-apply" style="width:100%;margin-top:10px;">▶ APLICAR</button>
 </div>
 
 <!-- LEADERBOARD -->
 <div id="leaderboard-panel">
-  <div class="lb-header"><h3>🏆 Global Ranking</h3><button class="lb-close" id="lb-close">✕</button></div>
+  <div class="lb-header"><h3>🏆 Ranking Global</h3><button class="lb-close" id="lb-close">✕</button></div>
   <div class="lb-player-stats" id="lb-player-stats" style="display:none;">
     <h4 id="lb-player-name">—</h4>
     <div class="lb-stats-grid">
-      <div class="lb-stat-item"><div class="val" id="ps-total">0</div><div class="lbl">Games</div></div>
-      <div class="lb-stat-item"><div class="val" id="ps-wins">0</div><div class="lbl">Wins</div></div>
-      <div class="lb-stat-item"><div class="val" id="ps-best">—</div><div class="lbl">Best</div></div>
-      <div class="lb-stat-item"><div class="val" id="ps-avg">—</div><div class="lbl">Average</div></div>
+      <div class="lb-stat-item"><div class="val" id="ps-total">0</div><div class="lbl">Partidas</div></div>
+      <div class="lb-stat-item"><div class="val" id="ps-wins">0</div><div class="lbl">Victorias</div></div>
+      <div class="lb-stat-item"><div class="val" id="ps-best">—</div><div class="lbl">Mejor</div></div>
+      <div class="lb-stat-item"><div class="val" id="ps-avg">—</div><div class="lbl">Promedio</div></div>
     </div>
   </div>
   <div class="lb-filters">
-    <button class="lb-filter-btn active" data-preset="medium">Medium</button>
-    <button class="lb-filter-btn" data-preset="easy">Easy</button>
-    <button class="lb-filter-btn" data-preset="hard">Hard</button>
-    <button class="lb-filter-btn" data-preset="extreme">Extreme</button>
-    <button class="lb-filter-btn" data-preset="all">All</button>
+    <button class="lb-filter-btn active" data-preset="medium">Medio</button>
+    <button class="lb-filter-btn" data-preset="easy">Fácil</button>
+    <button class="lb-filter-btn" data-preset="hard">Difícil</button>
+    <button class="lb-filter-btn" data-preset="extreme">Extremo</button>
+    <button class="lb-filter-btn" data-preset="all">Todos</button>
   </div>
-  <div class="lb-list" id="lb-list"><div class="lb-empty">No games recorded yet</div></div>
+  <div class="lb-list" id="lb-list"><div class="lb-empty">Sin partidas registradas aún</div></div>
 </div>
 
-<!-- EXPLOSION -->
+<!-- EXPLOSION SCREEN -->
 <div id="explosion-screen">
   <div class="explosion-emoji">💥</div>
-  <div class="explosion-text">YOU BLEW UP!</div>
-  <div class="explosion-sub">Mission failed in the Strait of Hormuz</div>
+  <div class="explosion-text">¡EXPLOTASTE!</div>
+  <div class="explosion-sub">Misión fallida en el Estrecho de Ormuz</div>
   <div class="result-stats" id="explosion-stats"></div>
   <div class="result-actions">
-    <button class="btn" id="btn-retry-loss">↻ RETRY</button>
+    <button class="btn" id="btn-retry-loss">↻ REINTENTAR</button>
     <button class="btn btn-gold" id="btn-ranking-loss">🏆 RANKING</button>
   </div>
 </div>
 
-<!-- VICTORY -->
+<!-- VICTORY SCREEN -->
 <div id="victory-screen">
-  <div class="victory-emoji">🛢️</div>
-  <div class="victory-title">CONGRATULATIONS!</div>
+  <div class="victory-emoji">🎖️</div>
+  <div class="victory-title">¡FELICIDADES!</div>
 
   <!--
     ╔═══════════════════════════════════════════════════════╗
-    ║  YOUR CUSTOM IMAGE GOES HERE                          ║
+    ║  TU IMAGEN PERSONALIZADA VA AQUÍ                      ║
     ║                                                       ║
-    ║  Option 1: Put your image in public/images/ and set:  ║
-    ║    <img src="/images/your-image.png" alt="victory">   ║
+    ║  Opción 1: Pon tu imagen en public/images/ y cambia:  ║
+    ║    <img src="/images/tu-imagen.png" alt="victoria">   ║
     ║                                                       ║
-    ║  Option 2: Use an external URL:                       ║
-    ║    <img src="https://..." alt="victory">              ║
+    ║  Opción 2: Usa una URL externa:                       ║
+    ║    <img src="https://..." alt="victoria">             ║
     ║                                                       ║
-    ║  Then add class "has-image" to the parent div.        ║
+    ║  Luego agrega la clase "has-image" al div padre.      ║
     ╚═══════════════════════════════════════════════════════╝
   -->
   <div class="victory-image-slot" id="victory-image">
     <div class="victory-image-placeholder">🍊</div>
-    <div class="victory-image-hint"><img src="/images/orange_agent_epstein.jpeg" alt="victory"></div>
+    <div class="victory-image-hint"><img src="/images/orange_agent_epstein.jpeg" alt="victoria"></div>
   </div>
 
   <div class="victory-message">
-    You cleaned up the mess the Orange Agent left behind 🍊<br>
-    The strait is clear — oil tankers can flow again!
+    Resolviste la cagada que hizo el Agente Naranja 🍊<br>
+    ¡El estrecho está despejado, marinero!
   </div>
   <div class="result-stats" id="victory-stats"></div>
   <div class="result-actions">
-    <button class="btn" id="btn-retry-win">↻ NEW MISSION</button>
+    <button class="btn" id="btn-retry-win">↻ NUEVA MISIÓN</button>
     <button class="btn btn-gold" id="btn-ranking-win">🏆 RANKING</button>
   </div>
 </div>
@@ -660,14 +675,19 @@
     hard:    { rows: 20, cols: 20, mines: 70 },
     extreme: { rows: 25, cols: 25, mines: 130 },
   };
+
+  // Estrecho de Ormuz — fit preciso
   const HORMUZ_BOUNDS = [[25.5, 54.0], [27.4, 57.8]];
 
   let CONFIG = { ...PRESETS.medium };
   let currentPreset = 'medium';
   let playerName = '';
+
+  // State
   let board = [], gameState = 'idle', timerInterval = null, seconds = 0;
   let firstClick = true, revealedCount = 0, flagCount = 0, totalSafe = 0;
 
+  // DOM
   const $ = id => document.getElementById(id);
   const $grid = $('grid'), $minesLeft = $('mines-left'), $timer = $('timer');
   const $cellsLeft = $('cells-left'), $presetSel = $('preset-select');
@@ -680,7 +700,7 @@
   const $explosionScr = $('explosion-screen'), $victoryScr = $('victory-screen');
   const $hud = $('hud'), $gridWrapper = $('grid-wrapper');
 
-  // MAP
+  // MAP — Estrecho de Ormuz
   const map = L.map('map', {
     zoomControl: false, attributionControl: false,
     dragging: false, scrollWheelZoom: false,
@@ -689,7 +709,7 @@
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
   map.fitBounds(HORMUZ_BOUNDS, { padding: [10, 10] });
 
-  // UNLOCK
+  // ── UNLOCK ──
   $('unlock-btn').addEventListener('click', () => {
     $unlockScr.classList.add('hidden');
     setTimeout(() => {
@@ -705,7 +725,7 @@
     newGame();
   }
 
-  // NAME
+  // ── NAME ──
   $('btn-name-ok').addEventListener('click', confirmName);
   $nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') confirmName(); });
   function confirmName() {
@@ -723,7 +743,7 @@
     $nameInput.focus(); $nameInput.select();
   });
 
-  // BOARD
+  // ── BOARD ──
   function createBoard() {
     board = [];
     for (let r = 0; r < CONFIG.rows; r++) {
@@ -732,12 +752,12 @@
         board[r][c] = { mine: false, revealed: false, flagged: false, count: 0 };
     }
   }
-  function placeMines(sR, sC) {
+  function placeMines(safeR, safeC) {
     let placed = 0;
     while (placed < CONFIG.mines) {
       const r = Math.floor(Math.random() * CONFIG.rows);
       const c = Math.floor(Math.random() * CONFIG.cols);
-      if (Math.abs(r - sR) <= 1 && Math.abs(c - sC) <= 1) continue;
+      if (Math.abs(r - safeR) <= 1 && Math.abs(c - safeC) <= 1) continue;
       if (board[r][c].mine) continue;
       board[r][c].mine = true; placed++;
     }
@@ -758,9 +778,9 @@
       }
   }
 
-  // RENDER
+  // ── RENDER ──
   function computeCellSize() {
-    const p = 20, aW = innerWidth - p*2, aH = innerHeight - 52 - p*2;
+    const p = 20, aW = window.innerWidth - p*2, aH = window.innerHeight - 52 - p*2;
     return Math.max(16, Math.min(Math.floor(aW/CONFIG.cols), Math.floor(aH/CONFIG.rows), 48));
   }
   function renderGrid() {
@@ -786,7 +806,7 @@
   }
   function getCell(r, c) { return $grid.children[r * CONFIG.cols + c]; }
 
-  // ACTIONS
+  // ── GAME ACTIONS ──
   function onLeft(r, c) {
     if (gameState === 'won' || gameState === 'lost') return;
     const cell = board[r][c];
@@ -815,7 +835,7 @@
     updateHUD();
   }
 
-  // WIN / LOSE
+  // ── WIN / LOSE ──
   function checkWin() {
     if (revealedCount === totalSafe) {
       gameState = 'won'; stopTimer();
@@ -845,7 +865,7 @@
   }
 
   function showExplosion() {
-    $('explosion-stats').innerHTML = `Time: <strong>${fmtT(seconds)}s</strong> · Cells: <strong>${revealedCount}</strong> · Flags: <strong>${flagCount}</strong>`;
+    $('explosion-stats').innerHTML = `Tiempo: <strong>${fmtT(seconds)}s</strong> · Celdas: <strong>${revealedCount}</strong> · Banderas: <strong>${flagCount}</strong>`;
     $explosionScr.classList.add('active');
     for (let i = 0; i < 30; i++) {
       const p = document.createElement('div');
@@ -861,9 +881,9 @@
   }
 
   function showVictory() {
-    $('victory-stats').innerHTML = `Time: <strong>${fmtT(seconds)}s</strong> · Grid: <strong>${CONFIG.rows}×${CONFIG.cols}</strong> · Mines: <strong>${CONFIG.mines}</strong>`;
+    $('victory-stats').innerHTML = `Tiempo: <strong>${fmtT(seconds)}s</strong> · Config: <strong>${CONFIG.rows}×${CONFIG.cols}</strong> · Minas: <strong>${CONFIG.mines}</strong>`;
     $victoryScr.classList.add('active');
-    const cols = ['#c78c06','#c0392b','#0e7c5f','#8e44ad','#2980b9','#d35400'];
+    const cols = ['#ffd700','#ff3366','#00ffaa','#aa66ff','#00ccff','#ff8800'];
     for (let i = 0; i < 60; i++) {
       const c = document.createElement('div');
       c.className = 'confetti';
@@ -878,13 +898,13 @@
     }
   }
 
-  // TIMER
+  // ── TIMER ──
   function startTimer() { seconds = 0; timerInterval = setInterval(() => { seconds++; $timer.textContent = fmtT(seconds); }, 1000); }
   function stopTimer() { if (timerInterval) { clearInterval(timerInterval); timerInterval = null; } }
   function fmtT(s) { return String(s).padStart(3, '0'); }
   function updateHUD() { $minesLeft.textContent = CONFIG.mines - flagCount; $cellsLeft.textContent = totalSafe - revealedCount; }
 
-  // API
+  // ── API ──
   async function saveScore(result) {
     try {
       await fetch(`${API_BASE}/api/scores`, {
@@ -899,11 +919,11 @@
   }
 
   async function loadLeaderboard(preset = 'medium') {
-    $lbList.innerHTML = '<div class="lb-loading">Loading ranking...</div>';
+    $lbList.innerHTML = '<div class="lb-loading">Cargando ranking...</div>';
     try {
       const res = await fetch(`${API_BASE}/api/scores/leaderboard?preset=${preset}&limit=20`);
       const data = await res.json();
-      if (!data.success || !data.scores.length) { $lbList.innerHTML = '<div class="lb-empty">No games recorded yet</div>'; return; }
+      if (!data.success || !data.scores.length) { $lbList.innerHTML = '<div class="lb-empty">Sin partidas registradas</div>'; return; }
       $lbList.innerHTML = data.scores.map((s, i) => `
         <div class="lb-row">
           <div class="lb-rank">${i+1}</div>
@@ -911,7 +931,7 @@
           <div class="lb-time">${fmtT(s.time)}s</div>
           <div class="lb-config">${s.difficulty.rows}×${s.difficulty.cols}</div>
         </div>`).join('');
-    } catch { $lbList.innerHTML = '<div class="lb-empty">Connection error</div>'; }
+    } catch { $lbList.innerHTML = '<div class="lb-empty">Error de conexión</div>'; }
   }
 
   async function loadPlayerStats() {
@@ -933,7 +953,7 @@
 
   function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
-  // LEADERBOARD UI
+  // ── LEADERBOARD UI ──
   function openLB() {
     $lbPanel.classList.add('open'); $cfgPanel.classList.remove('open');
     loadLeaderboard(currentPreset || 'medium'); loadPlayerStats();
@@ -950,7 +970,7 @@
     });
   });
 
-  // NEW GAME
+  // ── NEW GAME ──
   function newGame() {
     stopTimer(); gameState = 'idle'; firstClick = true;
     revealedCount = 0; flagCount = 0; seconds = 0;
@@ -964,7 +984,7 @@
     createBoard(); renderGrid(); updateHUD(); syncCfg();
   }
 
-  // CONFIG
+  // ── CONFIG ──
   function syncCfg() {
     $cfgRows.value = CONFIG.rows; $cfgRowsV.textContent = CONFIG.rows;
     $cfgCols.value = CONFIG.cols; $cfgColsV.textContent = CONFIG.cols;
@@ -987,13 +1007,13 @@
   $('btn-retry-loss').addEventListener('click', newGame);
   $('btn-retry-win').addEventListener('click', newGame);
 
-  // RESIZE
-  addEventListener('resize', () => {
+  // ── RESIZE ──
+  window.addEventListener('resize', () => {
     document.documentElement.style.setProperty('--cell-size', computeCellSize()+'px');
     map.invalidateSize(); map.fitBounds(HORMUZ_BOUNDS, { padding: [10, 10] });
   });
 
-  // INIT
+  // ── INIT ──
   const saved = sessionStorage.getItem('searchins_player');
   if (saved) { playerName = saved; $playerTag.textContent = playerName; }
 })();

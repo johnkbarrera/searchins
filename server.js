@@ -52,7 +52,7 @@ const scoreSchema = new mongoose.Schema({
 scoreSchema.index({ result: 1, 'difficulty.preset': 1, time: 1 });
 scoreSchema.index({ player: 1, playedAt: -1 });
 
-const Score = mongoose.model('Score', scoreSchema);
+const Score = mongoose.model('score_searchins', scoreSchema);
 
 /* ══════════════════════════════════════════
    API ROUTES
